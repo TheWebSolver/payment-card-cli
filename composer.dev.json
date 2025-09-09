@@ -1,0 +1,34 @@
+{
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=8.2",
+    "psr/container": "^2.0",
+    "thewebsolver/payment-card": "dev-main",
+    "thewebsolver/cli": "dev-main",
+    "thewebsolver/scraper": "dev-main"
+  },
+  "scripts": {
+    "useProd": "@putenv COMPOSER=composer.json",
+    "update:packages": [
+      "@composer update --prefer-source",
+      "@useProd",
+      "@composer dump-autoload -o"
+    ],
+    "test": ["phpstan", "phpunit"]
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../../cli"
+    },
+    {
+      "type": "path",
+      "url": "../../payment-card"
+    },
+    {
+      "type": "path",
+      "url": "../../scraper"
+    }
+  ]
+}

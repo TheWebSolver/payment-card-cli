@@ -1,0 +1,14 @@
+includes:
+	- vendor/thewebsolver/scraper/phpstan-common.neon
+parameters:
+	level: max
+	bootstrapFiles:
+		- vendor/thewebsolver/cli/bootstrap.php
+	paths:
+		- Src
+		- cli-bootstrap.php
+	ignoreErrors:
+		-
+			path: cli-bootstrap.php
+			identifier: method.nonObject
+			count: 1

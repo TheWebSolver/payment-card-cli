@@ -1,0 +1,15 @@
+/*
+!bin
+!LICENSE
+!Src
+!Tests
+!Stubs
+!.editorconfig
+!phpcs.xml.dist
+!phpunit.xml.dist
+!composer.json
+!composer.dev.json
+!phpstan.dist.neon
+!paycard
+!config.php
+!cli-bootstrap.php

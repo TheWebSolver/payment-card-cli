@@ -1,0 +1,16 @@
+#!/usr/bin/env php
+<?php
+/**
+ * This file is part of Payment Card package and cannot be used independently (for obvious reason).
+
+ * This package handles auto-discovery of composer's "autoload.php" file & use the
+ * configuration file (file must be named: "config.php") created at project root.
+ * User is not required to bootstrap anything, besides running the cli command.
+ * This CLI script is listed as a vendor binary in the composer's binary path.
+ *
+ * ```sh
+ * vendor/bin/paycard namespace:commandName
+ * ```
+ */
+
+require_once __DIR__ . '/cli-bootstrap.php';
