@@ -16,7 +16,7 @@ use TheWebSolver\Codegarage\Scraper\Service\TableScrapingService;
  * @template-extends TableScrapingService<string|list<int|int[]>,TTracer>
  */
 #[ScrapeFrom( 'Payment Card Number', 'https://en.wikipedia.org/wiki/Payment_card_number', 'payment-card-number.html' )]
-class CardNumberScrapingService extends TableScrapingService {
+class WikiCardTypeScrapingService extends TableScrapingService {
 	/** @param TTracer $tableTracer */
 	public function __construct( protected TableTracer $tableTracer, ?ScrapeFrom $scrapeFrom = null ) {
 		parent::__construct( $tableTracer->traceWithout( Table::Caption, Table::THead ), $scrapeFrom );

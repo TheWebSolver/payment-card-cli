@@ -13,7 +13,7 @@ use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
 
 /** @template-extends ScrapingService<string|int|list<int|string|list<int|string>>> */
 #[ScrapeFrom( 'Braintree GitHub', 'https://raw.githubusercontent.com/braintree/credit-card-type/refs/heads/main/src/lib/card-types.ts', 'cards.ts' )]
-class BraintreeGithubScrapingService extends ScrapingService {
+class BraintreeCardTypeScrapingService extends ScrapingService {
 	final public const CARD_TYPE_REGEX       = '.*?{(.*?}, )}';
 	final public const DIGIT_REGEX           = '[0-9]+';
 	final public const DIGIT_SEPARATOR_REGEX = '[, ?]+';

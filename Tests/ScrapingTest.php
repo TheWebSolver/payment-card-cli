@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
 use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
-use TheWebSolver\Codegarage\PaymentCard\Service\BraintreeGithubScrapingService;
+use TheWebSolver\Codegarage\PaymentCard\Service\BraintreeCardTypeScrapingService;
 
 class ScrapingTest extends TestCase {
 	public const RESOURCE_DIRECTORY = __DIR__ . DIRECTORY_SEPARATOR . 'Resource';
@@ -28,7 +28,7 @@ class ScrapingTest extends TestCase {
 
 	#[Test]
 	public function itScrapesFromBraintreeGithub(): void {
-		$mastercard = $this->getMasterCard( new BraintreeGithubScrapingService( numericToInteger: true ) );
+		$mastercard = $this->getMasterCard( new BraintreeCardTypeScrapingService( numericToInteger: true ) );
 
 		$this->assertSame( [ 4, 8, 12 ], $mastercard['gaps'] );
 		$this->assertSame( [ 16 ], $mastercard['lengths'] );
@@ -45,7 +45,7 @@ class ScrapingTest extends TestCase {
 			$mastercard['code']
 		);
 
-		$mastercard = $this->getMasterCard( new BraintreeGithubScrapingService( numericToInteger: false ) );
+		$mastercard = $this->getMasterCard( new BraintreeCardTypeScrapingService( numericToInteger: false ) );
 
 		$this->assertSame( [ '4', '8', '12' ], $mastercard['gaps'] );
 		$this->assertSame( [ '16' ], $mastercard['lengths'] );
