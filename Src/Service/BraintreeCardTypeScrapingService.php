@@ -11,17 +11,14 @@ use TheWebSolver\Codegarage\Scraper\Attributes\ScrapeFrom;
 use TheWebSolver\Codegarage\Scraper\Service\ScrapingService;
 
 /**
- * @template-extends ScrapingService<Iterator<
- *  string,
- *  array{
- *   niceType : string,
- *   type     : string,
- *   patterns : list<int|string|list<int|string>>,
- *   gaps     : list<int|string>,
- *   lengths  : list<int|string>,
- *   code     : array{name:string,size:int|string}
- *  }
- * >>
+ * @template-extends ScrapingService<Iterator<string, array{
+ *  niceType : string,
+ *  type     : string,
+ *  patterns : list<int|string|list<int|string>>,
+ *  gaps     : list<int|string>,
+ *  lengths  : list<int|string>,
+ *  code     : array{name:string,size:int|string}
+ * }>>
  */
 #[ScrapeFrom( 'Braintree GitHub', 'https://raw.githubusercontent.com/braintree/credit-card-type/refs/heads/main/src/lib/card-types.ts', 'cards.ts' )]
 class BraintreeCardTypeScrapingService extends ScrapingService {
@@ -31,18 +28,23 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 	final public const DIGIT_VALUE_REGEX     = '[\[]+[0-9,? ?]+[\]]';
 	final public const DIGIT_RANGE_REGEX     = '[\[]+' . self::DIGIT_REGEX . '+' . self::DIGIT_SEPARATOR_REGEX . self::DIGIT_REGEX . '[\]]';
 
-	final public const INVALID_JS_OBJECT_FORMAT = 'Invalid JS Object for extracting Braintree Github Card Types.';
-	/** @placeholder: `%S` Given string to extract card type */
-	final public const INVALID_JS_OBJECT_FOR_CARD_TYPE = 'Invalid JS Object for extracting Braintree GitHub Card details key/value pair. %s given.';
-	/** @placeholder: `%S` Given string to extract card code details. */
-	final public const INVALID_JS_OBJECT_FOR_CARD_CODE = 'Invalid JS Object for extracting Braintree GitHub Card Code details. %s given.';
+	final public const KEYS_WITH_NUMERIC_VALUES = [ 'patterns', 'gaps', 'lengths' ];
 
-	final public const INVALID_JS_OBJECT_KEYS_FOR_CARD_TYPE = 'Card Code must have "name" and "size" key/value pair.';
-	final public const INVALID_JS_OBJECT_KEYS_FOR_CARD_CODE = 'Card Code must have "name" and "size" key/value pair.';
-	/** @placeholder: `%S` Given string to extract numeric values. */
-	final public const INVALID_FORMAT_FOR_NUMERIC_VALUE = 'Card details must be either a number or comma separated numbers enclosed by "[" and "]". %s given.';
-	/** @placeholder: `%S` Given string to extract numeric value range. */
-	final public const INVALID_FORMAT_FOR_NUMERIC_RANGE = 'Card details in range enclosed by "[" and "]" must only be numbers. %s given.';
+	final public const INVALID_JS_OBJECT_FORMAT = 'Invalid JS Object for extracting Braintree Github Card Types.';
+	/** @placeholder: `%S` String to extract card type. */
+	final public const INVALID_JS_OBJECT_FOR_CARD_TYPE = 'Invalid JS Object for extracting Braintree GitHub Card details key/value pair. "%s" given.';
+	/** @placeholder `%s` String to extract card type details. */
+	final public const INVALID_JS_OBJECT_KEYS_FOR_CARD_TYPE = 'Card Type must have "niceType", "type", "patterns", "gaps", and "lengths" key/value pair. "%s" given.';
+	/** @placeholder: `%S` String to extract card code. */
+	final public const INVALID_JS_OBJECT_FOR_CARD_CODE = 'Invalid JS Object for extracting Braintree GitHub Card Code details. "%s" given.';
+	/** @placeholder: `%S` String to extract card code details. */
+	final public const INVALID_JS_OBJECT_KEYS_FOR_CARD_CODE = 'Card Code must have "name" and "size" key/value pair. "%s" given.';
+	/** @placeholder: `%S` String to extract numeric values. */
+	final public const INVALID_FORMAT_FOR_NUMERIC_VALUE = 'Card details must be either a number or comma separated numbers enclosed by "[" and "]". "%s" given.';
+	/** @placeholder: `%S` String to extract numeric values range. */
+	final public const INVALID_FORMAT_FOR_NUMERIC_RANGE = 'Card details in range enclosed by "[" and "]" must only be numbers. "%s" given.';
+	/** @placeholder: `%S` String to convert to number. */
+	final public const NOT_A_NUMERIC_VALUE = 'Given Card Type value "%s" is not a numeric value.';
 
 	public function __construct( private bool $numericToInteger = true ) {
 		parent::__construct();
@@ -66,22 +68,29 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 	private array $rawCardDetails;
 
 	public function parse( string $content ): Iterator {
-		$content = Normalize::controlsAndWhitespacesIn( $content );
-		$content = explode( 'cardTypes: CardCollection = {', $content )[1];
-		$numeric = [ 'patterns', 'gaps', 'lengths' ];
+		$content     = Normalize::controlsAndWhitespacesIn( $content );
+		$content     = explode( 'cardTypes: CardCollection = {', $content, limit: 2 )[1];
+		$numericKeys = self::KEYS_WITH_NUMERIC_VALUES;
 
 		foreach ( $this->matchedCardTypes( $content ) as $details ) {
-			[$cardDetails, $codeDetails] = explode( 'code: {', $details, 2 );
-			$this->rawCardDetails        = $this->extractKeyValue( trim( $cardDetails ) );
-			$this->cardDetails['type']   = $type = $this->rawCardDetails['type'];
-			$this->cardDetails['code']   = $this->extractCardCodeDetails( $codeDetails );
+			[$cardTypeName, $reset] = $this->setCardDetails( $details );
 
-			array_walk( $numeric, $this->extractDigitsInCardDetails( ... ) );
+			array_walk( $numericKeys, $this->setExtractedDigitValuesAsCardDetails( ... ) );
 
-			unset( $this->rawCardDetails );
+			$reset();
 
-			yield $type => $this->cardDetails;
+			yield $cardTypeName => $this->cardDetails;
 		}
+	}
+
+	/** @return array{0:string,1:callable(): void} */
+	private function setCardDetails( string $string ): array {
+		[$cardDetails, $codeDetails] = explode( 'code: {', $string, limit: 2 );
+		$this->rawCardDetails        = $this->extractKeyValue( trim( $cardDetails ) );
+		$this->cardDetails['code']   = $this->extractCardCodeDetails( $codeDetails );
+		$this->cardDetails['type']   = $cardTypeName = $this->rawCardDetails['type'];
+
+		return [ $cardTypeName, function () { unset( $this->rawCardDetails ); } ]; // phpcs:ignore
 	}
 
 	/** @return list<string> */
@@ -93,7 +102,7 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 
 	/** @return array<'niceType'|'type'|'patterns'|'gaps'|'lengths',string> */
 	private function extractKeyValue( string $string ): array {
-		$details = preg_match_all( "/{$this->getCardObjectKeyValueRegex()}/", $string, $matchedGroup, PREG_SET_ORDER )
+		$details = preg_match_all( "/{$this->getObjectKeyValueRegex()}/", $string, $matchedGroup, PREG_SET_ORDER )
 			? array_reduce( $matchedGroup, $this->toCardObjectKeyValue( ... ), initial: [] )
 			: null;
 
@@ -102,7 +111,7 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 
 	/** @return array{name:string,size:int|string} */
 	private function extractCardCodeDetails( string $string ): array {
-		$details = preg_match_all( "/{$this->getCardCodeKeyValueRegex()}/", $string, $matchedGroups, PREG_SET_ORDER )
+		$details = preg_match_all( "/{$this->getCodeObjectKeyValueRegex()}/", $string, $matchedGroups, PREG_SET_ORDER )
 			? array_reduce( $matchedGroups, $this->toCardCodeNameAndSize( ... ), initial: [] )
 			: null;
 
@@ -111,15 +120,15 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 
 	/**
 	 * @param array{}       $carry
-	 * @param array<string> $group
+	 * @param array<string> $matched
 	 * @return array<'niceType'|'type'|'patterns'|'gaps'|'lengths',string>
 	 */
-	private function toCardObjectKeyValue( array $carry, array $group ): array {
-		$key = $group[1] ?? null;
+	private function toCardObjectKeyValue( array $carry, array $matched ): array {
+		$key = $matched[1] ?? null;
 
 		match ( $key ) {
-			default => $this->throw( self::INVALID_JS_OBJECT_KEYS_FOR_CARD_TYPE ),
-			'niceType', 'type', 'patterns', 'gaps', 'lengths' => $carry[ $key ] = trim( $group[2], '"' ),
+			default => $this->throw( self::INVALID_JS_OBJECT_KEYS_FOR_CARD_TYPE, $matched[0] ),
+			'niceType', 'type', 'patterns', 'gaps', 'lengths' => $carry[ $key ] = trim( $matched[2], '"' ),
 		};
 
 		return $carry;
@@ -127,16 +136,16 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 
 	/**
 	 * @param array{name?:string,size?:int|string} $carry
-	 * @param array<string>                        $group
+	 * @param array<string>                        $matched
 	 * @return array{name:string,size:int|string}
 	 */
-	private function toCardCodeNameAndSize( array $carry, array $group ): array {
-		$key = $group[1] ?? null;
+	private function toCardCodeNameAndSize( array $carry, array $matched ): array {
+		$key = $matched[1] ?? null;
 
 		match ( $key ) {
-			default => $this->throw( self::INVALID_JS_OBJECT_FOR_CARD_CODE ),
-			'name'  => $carry[ $key ] = $group[2],
-			'size'  => $carry[ $key ] = $this->numericToInteger ? intval( $group[2] ) : $group[2],
+			default => $this->throw( self::INVALID_JS_OBJECT_FOR_CARD_CODE, $matched[0] ),
+			'name'  => $carry[ $key ] = $matched[2],
+			'size'  => $carry[ $key ] = $this->maybeConvertToNumber( $matched[2] ),
 		};
 
 		assert( isset( $carry['name'], $carry['size'] ) );
@@ -144,7 +153,7 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 		return $carry;
 	}
 
-	private function getCardObjectKeyValueRegex(): string {
+	private function getObjectKeyValueRegex(): string {
 		$key                                = '[niceType|type|patterns|gaps|lengths]+';
 		$keyValueSeparator                  = '?:\:[ ]+?';
 		$anyValue                           = '.*?';
@@ -154,13 +163,13 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 		return "($key)($keyValueSeparator)($anyValue($captureIfSucceededByNextKeyInitial)|$orCaptureNumericValue)";
 	}
 
-	private function getCardCodeKeyValueRegex(): string {
+	private function getCodeObjectKeyValueRegex(): string {
 		$key                 = '[name|size]+';
 		$keyValueSeparator   = '?:\:[ ]+?';
 		$captureIfIsCodeName = '?:"?([A-Z]+';
-		$orCaptureCodeLength = self::DIGIT_REGEX;
+		$orCaptureCodeSize   = self::DIGIT_REGEX;
 
-		return "($key)($keyValueSeparator)($captureIfIsCodeName|$orCaptureCodeLength))";
+		return "($key)($keyValueSeparator)($captureIfIsCodeName|$orCaptureCodeSize))";
 	}
 
 	private function maybeRemoveOpeningClosingBracketsFrom( string $string ): string {
@@ -176,14 +185,12 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 	}
 
 	/** @param 'patterns'|'gaps'|'lengths' $key */
-	private function extractDigitsInCardDetails( string $key ): void {
+	private function setExtractedDigitValuesAsCardDetails( string $key ): void {
 		$subject           = $this->maybeRemoveOpeningClosingBracketsFrom( $raw = $this->rawCardDetails[ $key ] );
 		$digitOrRangeRegex = self::DIGIT_RANGE_REGEX . '|' . self::DIGIT_REGEX;
 
-		preg_match_all( "/{$digitOrRangeRegex}/", $subject, $singleOrRange )
+		( preg_match_all( "/{$digitOrRangeRegex}/", $subject, $singleOrRange ) && ( $details = $singleOrRange[0] ) )
 			|| $this->throw( self::INVALID_FORMAT_FOR_NUMERIC_VALUE, $raw );
-
-		$details = $singleOrRange[0];
 
 		array_walk( $details, $this->toNumberOrNumberRange( ... ) );
 
@@ -193,15 +200,23 @@ class BraintreeCardTypeScrapingService extends ScrapingService {
 	/** @param-out string|int|list<string|int> $string */
 	private function toNumberOrNumberRange( string &$string ): void {
 		if ( ! str_starts_with( $string, '[' ) ) {
-			$this->numericToInteger && ( $string = intval( $string ) );
+			$string = $this->maybeConvertToNumber( $string );
 
 			return;
 		}
 
-		preg_match_all( '/' . self::DIGIT_REGEX . '/', $string, $range )
+		( preg_match_all( '/' . self::DIGIT_REGEX . '/', $string, $ranges ) && ( $range = $ranges[0] ) )
 			|| $this->throw( self::INVALID_FORMAT_FOR_NUMERIC_RANGE, $string );
 
-		$string = $this->numericToInteger ? array_map( intval( ... ), $range[0] ) : $range[0];
+		array_walk( $range, $this->toNumberOrNumberRange( ... ) );
+
+		$string = $range;
+	}
+
+	private function maybeConvertToNumber( string $string ): int|string {
+		ctype_digit( $string ) || $this->throw( self::NOT_A_NUMERIC_VALUE, $string );
+
+		return $this->numericToInteger ? intval( $string ) : $string;
 	}
 
 	private function throw( string $msg, string|int ...$placeholderArgs ): never {
