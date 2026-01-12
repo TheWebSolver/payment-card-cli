@@ -9,7 +9,7 @@
  * This CLI script is listed as a vendor binary in the composer's binary path.
  *
  * ```sh
- * vendor/bin/paycard namespace:commandName
+ * vendor/bin/payment-card namespace:commandName
  * ```
  */
 

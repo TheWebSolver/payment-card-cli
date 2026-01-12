@@ -10,6 +10,6 @@
 !composer.json
 !composer.dev.json
 !phpstan.dist.neon
-!paycard
+!payment-card
 !config.php
 !cli-bootstrap.php

@@ -1,5 +1,5 @@
 includes:
-	- vendor/thewebsolver/scraper/phpstan-common.neon
+	- vendor/thewebsolver/cli/phpstan-common.neon
 parameters:
 	level: max
 	bootstrapFiles:

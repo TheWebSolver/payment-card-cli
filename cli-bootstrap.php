@@ -7,6 +7,11 @@ declare( strict_types = 1 );
 use TheWebSolver\Codegarage\Cli\Cli;
 use TheWebSolver\Codegarage\Cli\Bootstrap;
 use TheWebSolver\Codegarage\Cli\Container;
+use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
+use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
+use TheWebSolver\Codegarage\PaymentCard\Cli\WikiPaymentCardCommand;
+use TheWebSolver\Codegarage\PaymentCard\Tracer\WikiPaymentCardTracer;
+use TheWebSolver\Codegarage\PaymentCard\Service\WikiPaymentCardScrapingService;
 
 registerMainBootstrapFileForPaymentCardCommands();
 
@@ -30,7 +35,11 @@ function loadContainerAndRunPaymentCardCommands( Bootstrap $bootstrap ): void {
 	$bootstrap->loadDirectories();
 
 	$container = $bootstrap->config['container'] ?? new Container(
-		bindings: [ Cli::class => [ Cli::class, true ] ]
+		bindings: [ Cli::class => [ Cli::class, true ] ],
+		context: [
+			WikiPaymentCardScrapingService::class => [ TableTracer::class => WikiPaymentCardTracer::class ],
+			WikiPaymentCardCommand::class         => [ Scrapable::class => WikiPaymentCardScrapingService::class ],
+		]
 	);
 
 	$bootstrap->config['commandLoader']->load( $container );
