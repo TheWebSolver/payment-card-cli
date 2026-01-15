@@ -9,7 +9,7 @@ use TheWebSolver\Codegarage\Cli\Bootstrap;
 use TheWebSolver\Codegarage\Cli\Container;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
-use TheWebSolver\Codegarage\PaymentCard\Cli\WikiPaymentCardCommand;
+use TheWebSolver\Codegarage\PaymentCard\Cli\ScrapeWikiPaymentCard;
 use TheWebSolver\Codegarage\PaymentCard\Tracer\WikiPaymentCardTracer;
 use TheWebSolver\Codegarage\PaymentCard\Service\WikiPaymentCardScrapingService;
 
@@ -38,7 +38,7 @@ function loadContainerAndRunPaymentCardCommands( Bootstrap $bootstrap ): void {
 		bindings: [ Cli::class => [ Cli::class, true ] ],
 		context: [
 			WikiPaymentCardScrapingService::class => [ TableTracer::class => WikiPaymentCardTracer::class ],
-			WikiPaymentCardCommand::class         => [ Scrapable::class => WikiPaymentCardScrapingService::class ],
+			ScrapeWikiPaymentCard::class          => [ Scrapable::class => WikiPaymentCardScrapingService::class ],
 		]
 	);
 
