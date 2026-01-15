@@ -7,8 +7,13 @@ parameters:
 	paths:
 		- Src
 		- cli-bootstrap.php
+		- Tests
 	ignoreErrors:
 		-
 			path: cli-bootstrap.php
 			identifier: method.nonObject
+			count: 1
+		- # Always returns array of non-empty-list of resolved cards when exit on resolve is false.
+			path: Src/Helper/PaymentCardResolver.php
+			identifier: return.type
 			count: 1
