@@ -19,9 +19,9 @@ use TheWebSolver\Codegarage\Cli\Integration\Scraper\TableConsole;
 use TheWebSolver\Codegarage\Scraper\Integration\Cli\TableConsole as CliTableConsole;
 
 /** @template-extends TableConsole<string|int> */
-#[Command( 'scrape', WikiPaymentCardCommand::NAME, 'Scrapes various payment card types from Wikipedia' )]
+#[Command( 'scrape', ScrapeWikiPaymentCard::NAME, 'Scrapes various payment card types from Wikipedia' )]
 #[Associative( 'extension', suggestedValues: FileFormat::class, default: FileFormat::Json )]
-class WikiPaymentCardCommand extends TableConsole {
+class ScrapeWikiPaymentCard extends TableConsole {
 	/** @use CliTableConsole<string|int> */
 	use CliTableConsole;
 
