@@ -71,7 +71,7 @@ class ResolvedMessageBuilder {
 		$lastPayloadIndex = array_key_last( $factory->getPayload() );
 		$payloadIndex     = $event->payloadIndex;
 		$status           = $this->cardResolver->getCoveredCardStatus()[ $payloadIndex ];
-		$name             = ! $event->isCreatableCard ? $factory->create( $payloadIndex )->getName() : $event->card?->getName() ?? '';
+		$name             = ! $event->isCreatableCard ? $factory->getPayload()[ $event->payloadIndex ]['name'] : $event->card?->getName() ?? '';
 
 		[$response, $symbol]                   = $this->getResponse( $status );
 		$shouldCheckNextPayloadFromSameFactory = $lastPayloadIndex !== $payloadIndex && ! $this->shouldExitOnResolve( $status );
@@ -85,10 +85,10 @@ class ResolvedMessageBuilder {
 		match ( $context ) {
 			default    => null,
 			'started'  => $section->addContent( $this->getFactoryStartedMessage( $factory, $factoryNumber ) ),
-			'success'  => $section->addContent( sprintf( self::STATUS_MESSAGE, Symbol::Tick->value, self::STATUS[0], $factoryNumber ) ),
+			'success'  => $section->addContent( '<bg=green>' . sprintf( self::STATUS_MESSAGE, Symbol::Tick->value, self::STATUS[0], $factoryNumber ) . '</>' ),
 			'exit'     => $section->addContent( 'Exiting...' ),
 			'finished' => $section->addContent( sprintf( self::FACTORY_MESSAGE, self::STATE[1], $this->cardNumber, $factoryNumber ) ),
-			'failure'  => $section->addContent( sprintf( self::STATUS_MESSAGE, Symbol::Cross->value, self::STATUS[1], $factoryNumber ) ),
+			'failure'  => $section->addContent( '<bg=red>' . sprintf( self::STATUS_MESSAGE, Symbol::Cross->value, self::STATUS[1], $factoryNumber ) . '</>' ),
 		};
 	}
 
@@ -99,7 +99,7 @@ class ResolvedMessageBuilder {
 
 		return sprintf( self::FACTORY_MESSAGE, self::STATE[0], $this->cardNumber, $factoryNumber )
 		. PHP_EOL
-		. sprintf( self::RESOURCE_PATH_MESSAGE, realpath( $resourcePath ) );
+		. '<info>' . sprintf( self::RESOURCE_PATH_MESSAGE, realpath( $resourcePath ) ) . '</>';
 	}
 
 	/** @return array{non-empty-string,Symbol} */
