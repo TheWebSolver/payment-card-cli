@@ -43,20 +43,18 @@ class PaymentCardResolver {
 				continue;
 			}
 
+			$action( 'finished', $factoryNumber, $factory );
+			$action( 'success', $factoryNumber, $factory );
+
 			if ( $exitOnResolve ) {
-				$action( 'finished', $factoryNumber, $factory );
-				$action( 'success', $factoryNumber, $factory );
 				$action( 'exit', $factoryNumber, $factory );
 
 				return $resolvedCards instanceof PaymentCard ? $resolvedCards : end( $resolvedCards );
 			}
 
 			$resolved[ $index ] = $resolvedCards;
-
-			$action( 'finished', $factoryNumber, $factory );
 		}//end foreach
 
-		$action( $resolved ? 'success' : 'failure', $factoryNumber, $factory );
 		$action( 'exit', $factoryNumber, $factory );
 
 		return $resolved ? $resolved : null;
