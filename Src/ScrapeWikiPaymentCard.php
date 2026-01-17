@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\PaymentCard\Cli;
+namespace TheWebSolver\Codegarage\PaymentCard\Cli\Console;
 
 use Iterator;
 use ArrayObject;

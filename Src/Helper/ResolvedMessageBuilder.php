@@ -11,8 +11,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
 use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Cli\ResolvePaymentCard;
 use TheWebSolver\Codegarage\PaymentCard\Event\PaymentCardCreated;
+use TheWebSolver\Codegarage\PaymentCard\Cli\Console\ResolvePaymentCard;
 
 class ResolvedMessageBuilder {
 	public const STATE  = [ 'Started', 'Finished' ];
