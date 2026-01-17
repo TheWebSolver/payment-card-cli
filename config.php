@@ -1,12 +1,12 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\PaymentCard\Cli;
+namespace TheWebSolver\Codegarage\PaymentCard\Cli\Console;
 
 return [
 	'directory' => [
 		[
-			'path'      => 'Src',
+			'path'      => 'Src/Console',
 			'namespace' => __NAMESPACE__,
 		],
 	],
