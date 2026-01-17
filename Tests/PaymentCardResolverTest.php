@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Cli\Helper\PaymentCardResolver;
+use TheWebSolver\Codegarage\PaymentCard\Helper\PaymentCardResolver;
 
 class PaymentCardResolverTest extends TestCase {
 	public const DOMESTIC_CARDS = [

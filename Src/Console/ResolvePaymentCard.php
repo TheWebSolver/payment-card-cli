@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\PaymentCard\Cli\Console;
+namespace TheWebSolver\Codegarage\PaymentCard\Console;
 
 use LogicException;
 use TheWebSolver\Codegarage\Cli\Console;
@@ -12,8 +12,8 @@ use TheWebSolver\Codegarage\Cli\Attribute\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Cli\Helper\PaymentCardResolver;
-use TheWebSolver\Codegarage\PaymentCard\Cli\Helper\ResolvedMessageBuilder;
+use TheWebSolver\Codegarage\PaymentCard\Helper\PaymentCardResolver;
+use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageBuilder;
 
 #[Command( 'resolve', 'payment-card', 'Resolves payment card against payload resource provided' )]
 #[Positional( 'card-number', 'Payment Card Number to resolve against payload', isOptional: false )]

@@ -10,7 +10,7 @@ use TheWebSolver\Codegarage\Cli\Container;
 use TheWebSolver\Codegarage\Scraper\Interfaces\Scrapable;
 use TheWebSolver\Codegarage\Scraper\Interfaces\TableTracer;
 use TheWebSolver\Codegarage\PaymentCard\Tracer\WikiPaymentCardTracer;
-use TheWebSolver\Codegarage\PaymentCard\Cli\Console\ScrapeWikiPaymentCard;
+use TheWebSolver\Codegarage\PaymentCard\Console\ScrapeWikiPaymentCard;
 use TheWebSolver\Codegarage\PaymentCard\Service\WikiPaymentCardScrapingService;
 
 registerMainBootstrapFileForPaymentCardCommands();

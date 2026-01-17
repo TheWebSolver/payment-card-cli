@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\PaymentCard\Cli\Helper;
+namespace TheWebSolver\Codegarage\PaymentCard\Helper;
 
 use ReflectionClass;
 use RuntimeException;
@@ -10,9 +10,9 @@ use TheWebSolver\Codegarage\Cli\Enums\Symbol;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
+use TheWebSolver\Codegarage\PaymentCard\Console\ResolvePaymentCard;
 use Symfony\Component\Console\Output\ConsoleSectionOutput as Output;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory as Factory;
-use TheWebSolver\Codegarage\PaymentCard\Cli\Console\ResolvePaymentCard;
 use TheWebSolver\Codegarage\PaymentCard\Event\PaymentCardCreated as Event;
 
 class ResolvedMessageBuilder {

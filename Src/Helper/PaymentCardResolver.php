@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\PaymentCard\Cli\Helper;
+namespace TheWebSolver\Codegarage\PaymentCard\Helper;
 
 use Closure;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCard;
