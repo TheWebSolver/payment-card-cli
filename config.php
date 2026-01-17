@@ -1,7 +1,7 @@
 <?php
 declare( strict_types = 1 );
 
-namespace TheWebSolver\Codegarage\PaymentCard\Cli\Console;
+namespace TheWebSolver\Codegarage\PaymentCard\Console;
 
 return [
 	'directory' => [
