@@ -10,9 +10,9 @@ use TheWebSolver\Codegarage\Cli\Enums\Symbol;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardFactory;
 use TheWebSolver\Codegarage\PaymentCard\Console\ResolvePaymentCard;
 use Symfony\Component\Console\Output\ConsoleSectionOutput as Output;
-use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory as Factory;
 use TheWebSolver\Codegarage\PaymentCard\Event\PaymentCardCreated as Event;
 
 class ResolvedMessageBuilder {
@@ -40,7 +40,7 @@ class ResolvedMessageBuilder {
 	|------------------------------------------------------------------------------------------------
 	*/
 
-	/** @var array{Factory,int} */
+	/** @var array{CardFactory,int} */
 	private array $currentFactory;
 
 	public function __construct( private InputInterface $input, private OutputInterface $output, private int $verbosity ) {}
@@ -63,7 +63,7 @@ class ResolvedMessageBuilder {
 		return $this;
 	}
 
-	public function build( string $context, int $factoryNumber, Factory $factory, ?Event $event = null ): ?Output {
+	public function build( string $context, int $factoryNumber, CardFactory $factory, ?Event $event = null ): ?Output {
 		if ( ! $section = Console::getOutputSection( $this->output, $this->verbosity ) ) {
 			return null;
 		}
@@ -103,14 +103,14 @@ class ResolvedMessageBuilder {
 		match ( $context ) {
 			default    => null,
 			'started'  => $section->addContent( $this->getFactoryStartedMessage( $factory, $number ) ),
-			'success'  => $section->addContent( '<bg=green>' . sprintf( self::STATUS_MESSAGE, Symbol::Tick->value, self::STATUS[0], $number ) . '</>' ),
+			'success'  => $section->addContent( '<bg=green;fg=black>' . sprintf( self::STATUS_MESSAGE, Symbol::Tick->value, self::STATUS[0], $number ) . '</>' ),
 			'exit'     => $section->addContent( 'Exiting...' ),
 			'finished' => $section->addContent( sprintf( self::FACTORY_MESSAGE, self::STATE[1], $this->cardNumber, $number ) ),
-			'failure'  => $section->addContent( '<bg=red>' . sprintf( self::STATUS_MESSAGE, Symbol::Cross->value, self::STATUS[1], $number ) . '</>' ),
+			'failure'  => $section->addContent( '<bg=red;fg=black>' . sprintf( self::STATUS_MESSAGE, Symbol::Cross->value, self::STATUS[1], $number ) . '</>' ),
 		};
 	}
 
-	protected function getFactoryStartedMessage( Factory $factory, int $factoryNumber ): string {
+	protected function getFactoryStartedMessage( CardFactory $factory, int $factoryNumber ): string {
 		$resourcePath = ( new ReflectionClass( $factory ) )->getProperty( 'filePath' )->getValue( $factory );
 
 		assert( is_string( $resourcePath ) );

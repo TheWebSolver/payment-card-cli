@@ -4,8 +4,8 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\PaymentCard\Helper;
 
 use Closure;
-use TheWebSolver\Codegarage\PaymentCard\PaymentCard;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\PaymentCard;
 use TheWebSolver\Codegarage\PaymentCard\Event\PaymentCardCreated;
 use TheWebSolver\Codegarage\PaymentCard\Traits\PaymentCardResolver as Resolver;
 
