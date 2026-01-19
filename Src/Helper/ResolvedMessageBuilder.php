@@ -9,9 +9,6 @@ use TheWebSolver\Codegarage\Cli\Enums\Symbol;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
-use TheWebSolver\Codegarage\PaymentCard\Event\CardCreated;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardType;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardFactory;
 use TheWebSolver\Codegarage\PaymentCard\Console\ResolvePaymentCard;
 use Symfony\Component\Console\Output\ConsoleSectionOutput as Output;
 
@@ -39,8 +36,8 @@ class ResolvedMessageBuilder {
 	|------------------------------------------------------------------------------------------------
 	*/
 
-	/** @var array{CardFactory<CardType>,int} */
-	protected array $currentFactory;
+	/** Parameter provided to resolve action. */
+	private CardFactoryStatus $resolverAction;
 
 	public function __construct( protected InputInterface $input, protected OutputInterface $output, protected int $verbosity ) {}
 
@@ -62,64 +59,84 @@ class ResolvedMessageBuilder {
 		return $this;
 	}
 
-	/**
-	 * @param CardFactory<CardType> $factory
-	 * @param CardCreated<CardType> $event
-	 */
-	public function build( string $context, int $factoryNumber, CardFactory $factory, ?CardCreated $event = null ): ?Output {
+	public function build( CardFactoryStatus $resolver ): ?Output {
 		if ( ! $section = Console::getOutputSection( $this->output, $this->verbosity ) ) {
 			return null;
 		}
 
-		$this->currentFactory = [ $factory, $factoryNumber ];
+		$this->resolverAction = $resolver;
 
-		if ( $event ) {
-			$this->handleCreatedCardFromFactory( $event, $section );
+		if ( $resolver->isCreating() ) {
+			$this->handleCreatedCardFromFactory( $section );
 		} else {
-			$this->handleResolvedContext( $context, $section );
+			$this->handleResolverStatus( $section );
 		}
 
 		$this->shouldWrite && $section->writeln( $section->getContent() );
 
-		unset( $this->currentFactory );
+		unset( $this->resolverAction );
 
 		return $section;
 	}
 
-	/** @param CardCreated<CardType> $event */
-	protected function handleCreatedCardFromFactory( CardCreated $event, Output $section ): void {
-		$lastPayloadIndex = array_key_last( $this->currentFactory[0]->getPayload() );
-		$payloadIndex     = $event->payloadIndex;
+	protected function handleCreatedCardFromFactory( Output $section ): void {
+		$lastPayloadIndex = array_key_last( $this->resolverAction->factory->getPayload() );
+		$payloadIndex     = $this->resolverAction->event()->payloadIndex;
 		$status           = $this->cardResolver->getCoveredCardStatus()[ $payloadIndex ];
 
 		[$response, $symbol]                   = $this->getResponse( $status );
 		$shouldCheckNextPayloadFromSameFactory = $lastPayloadIndex !== $payloadIndex && ! $this->shouldExitOnResolve( $status );
 
-		$section->addContent( sprintf( self::CREATED_MESSAGE, $symbol->value, $response, $this->getCardNameFrom( $event ) ) );
+		$section->addContent( sprintf( self::CREATED_MESSAGE, $symbol->value, $response, $this->getCreatedCardName() ) );
 
 		$shouldCheckNextPayloadFromSameFactory && $section->addContent( 'Checking against next card...' );
 	}
 
-	protected function handleResolvedContext( string $context, Output $section ): void {
-		[$factory, $number] = $this->currentFactory;
+	protected function handleResolverStatus( Output $section ): void {
+		if ( $this->resolverAction->notStarted() ) {
+			$section->addContent( $this->getStartedMessage() );
 
-		match ( $context ) {
-			default    => null,
-			'started'  => $section->addContent( $this->getFactoryStartedMessage( $factory, $number ) ),
-			'success'  => $section->addContent( '<bg=green;fg=black>' . sprintf( self::STATUS_MESSAGE, Symbol::Tick->value, self::STATUS[0], $number ) . '</>' ),
-			'exit'     => $section->addContent( 'Exiting...' ),
-			'finished' => $section->addContent( sprintf( self::FACTORY_MESSAGE, self::STATE[1], $this->cardNumber, $number ) ),
-			'failure'  => $section->addContent( '<bg=red;fg=black>' . sprintf( self::STATUS_MESSAGE, Symbol::Cross->value, self::STATUS[1], $number ) . '</>' ),
-		};
+			return;
+		}
+
+		$number = $this->resolverAction->factoryNumber;
+
+		$section->addContent( sprintf( self::FACTORY_MESSAGE, self::STATE[1], $this->cardNumber, $number ) );
+
+		[$color, $args] = $this->getResolvedMessageArgs();
+
+		$section->addContent( "<bg={$color};fg=black>" . sprintf( self::STATUS_MESSAGE, ...[ ...$args, $number ] ) . '</>' );
 	}
 
-	/** @param CardFactory<CardType> $factory */
-	protected function getFactoryStartedMessage( CardFactory $factory, int $factoryNumber ): string {
-		$resourcePath = $factory->getResourcePath();
+	/** @return array{string,array{string,string}} */
+	protected function getResolvedMessageArgs(): array {
+		return $this->resolverAction->isSuccess()
+			? [ 'green', [ Symbol::Tick->value, self::STATUS[0] ] ]
+			: [ 'red', [ Symbol::Cross->value, self::STATUS[1] ] ];
+	}
+
+	protected function fromPayload( string|int $index ): string {
+		[$factory, $number] = [ $this->resolverAction->factory, $this->resolverAction->factoryNumber ];
+		$data               = $factory->getPayload()[ $index ];
+
+		return is_array( $data ) && is_string( $data['name'] ?? null )
+			? $data['name']
+			: throw new RuntimeException( sprintf( self::INVALID_PAYLOAD, $number ) );
+	}
+
+	protected function getCreatedCardName(): string {
+		$event = $this->resolverAction->event();
+
+		return $event->isCreatableCard ? $this->fromPayload( $event->payloadIndex ) : $event->card?->getName() ?? '';
+	}
+
+	protected function getStartedMessage(): string {
+		[$factory, $number] = [ $this->resolverAction->factory, $this->resolverAction->factoryNumber ];
+		$resourcePath       = $factory->getResourcePath();
 
 		assert( is_string( $resourcePath ) );
 
-		return sprintf( self::FACTORY_MESSAGE, self::STATE[0], $this->cardNumber, $factoryNumber )
+		return sprintf( self::FACTORY_MESSAGE, self::STATE[0], $this->cardNumber, $number )
 		. PHP_EOL
 		. '<info>' . sprintf( self::RESOURCE_PATH_MESSAGE, realpath( $resourcePath ) ) . '</>';
 	}
@@ -135,19 +152,5 @@ class ResolvedMessageBuilder {
 
 	protected function shouldExitOnResolve( Status $status ): bool {
 		return Status::Success === $status && ResolvePaymentCard::shouldExitOnResolve( $this->input );
-	}
-
-	protected function fromPayload( string|int $index ): string {
-		[$factory, $number] = $this->currentFactory;
-		$data               = $factory->getPayload()[ $index ];
-
-		return is_array( $data ) && is_string( $data['name'] ?? null )
-			? $data['name']
-			: throw new RuntimeException( sprintf( self::INVALID_PAYLOAD, $number ) );
-	}
-
-	/** @param CardCreated<CardType> $event */
-	protected function getCardNameFrom( CardCreated $event ): string {
-		return $event->isCreatableCard ? $this->fromPayload( $event->payloadIndex ) : $event->card?->getName() ?? '';
 	}
 }

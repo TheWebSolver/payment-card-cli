@@ -40,14 +40,8 @@ class CardResolverTest extends TestCase {
 
 	#[Test]
 	#[DataProvider( 'provideNumbersForExit' )]
-	public function itResolvesEitherCardOrNullWhenExitStatusIsTrue( string $number, string $expectedName = '' ): void {
-		$action = static function () {};
-
-		if ( $expectedName ) {
-			$this->assertSame( $expectedName, $this->resolver->resolveCard( $number, true, $action )?->getName() );
-		} else {
-			$this->assertNull( $this->resolver->resolveCard( $number, true, $action ) );
-		}
+	public function itResolvesEitherCardOrNullWhenExitStatusIsTrue( string $number, ?string $expectedName = null ): void {
+		$this->assertSame( $expectedName, $this->resolver->resolveCard( $number, true, function () {} )?->getName() );
 	}
 
 	/** @return list<list<string>> */

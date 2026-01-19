@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\PaymentCard\Helper;
 
 use Closure;
+use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
 use TheWebSolver\Codegarage\PaymentCard\Event\CardCreated;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardType;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardFactory;
@@ -29,7 +30,10 @@ class CardResolver {
 		$this->factories = [ $factory, ...$factories ];
 	}
 
-	/** @return ($exitOnResolve is true ? CardType|null : null|non-empty-array<int,non-empty-list<CardType>>) */
+	/**
+	 * @param Closure(CardFactoryStatus):mixed $action
+	 * @return ($exitOnResolve is true ? CardType|null : null|non-empty-array<int,non-empty-list<CardType>>)
+	 */
 	public function resolveCard( string $cardNumber, bool $exitOnResolve, Closure $action ): CardType|array|null {
 		$this->cliResolveArguments[0] = $action;
 		$resolved                     = [];
@@ -38,28 +42,22 @@ class CardResolver {
 			$this->cliResolveArguments[1] = $factory;
 			$this->cliResolveArguments[2] = $factoryNumber = $index + 1;
 
-			$action( 'started', $factoryNumber, $factory );
+			$action( new CardFactoryStatus( $factory, $factoryNumber ) );
 
 			if ( is_null( $resolvedCards = $this->resolve( $cardNumber, $factory, $exitOnResolve ) ) ) {
-				$action( 'finished', $factoryNumber, $factory );
-				$action( 'failure', $factoryNumber, $factory );
+				$action( new CardFactoryStatus( $factory, $factoryNumber, Status::Failure ) );
 
 				continue;
 			}
 
-			$action( 'finished', $factoryNumber, $factory );
-			$action( 'success', $factoryNumber, $factory );
+			$action( new CardFactoryStatus( $factory, $factoryNumber, Status::Success ) );
 
 			if ( $exitOnResolve ) {
-				$action( 'exit', $factoryNumber, $factory );
-
 				return $resolvedCards instanceof CardType ? $resolvedCards : end( $resolvedCards );
 			}
 
 			$resolved[ $index ] = $resolvedCards;
-		}//end foreach
-
-		$action( 'exit', $factoryNumber, $factory );
+		}
 
 		return $resolved ? $resolved : null;
 	}
@@ -69,7 +67,8 @@ class CardResolver {
 		[$action, $factory, $factoryNumber] = $this->cliResolveArguments;
 		$eventHandlerStatus                 = $this->handlePaymentCardCreated( $event );
 
-		$action( 'created', $factoryNumber, $factory, $event );
+		// $action( 'created', $factoryNumber, $factory, $event );
+		$action( new CardFactoryStatus( $factory, $factoryNumber, Status::Omitted, $event ) );
 
 		return $eventHandlerStatus;
 	}
