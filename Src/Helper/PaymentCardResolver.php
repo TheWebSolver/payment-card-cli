@@ -4,29 +4,33 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\PaymentCard\Helper;
 
 use Closure;
-use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\PaymentCard;
-use TheWebSolver\Codegarage\PaymentCard\Event\PaymentCardCreated;
-use TheWebSolver\Codegarage\PaymentCard\Traits\PaymentCardResolver as Resolver;
+use TheWebSolver\Codegarage\PaymentCard\Event\CardCreated;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardType;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardFactory;
+use TheWebSolver\Codegarage\PaymentCard\Traits\CardResolver as Resolver;
 
-class PaymentCardResolver {
+class CardResolver {
 	use Resolver {
 		Resolver::handleResolvedCard as protected handlePaymentCardCreated;
 	}
 
-	/** @var non-empty-list<PaymentCardFactory> */
+	/** @var non-empty-list<CardFactory<CardType>> */
 	private array $factories;
+	/** @var array{Closure,CardFactory<CardType>,int} Action, current factory & its index */
+	private array $cliResolveArguments;
 
-	/** @no-named-arguments */
-	public function __construct( PaymentCardFactory $factory, PaymentCardFactory ...$factories ) {
+	/**
+	 * @param TFactory $factory
+	 * @param TFactory ...$factories
+	 * @no-named-arguments
+	 * @template TFactory of CardFactory
+	 */
+	public function __construct( CardFactory $factory, CardFactory ...$factories ) {
 		$this->factories = [ $factory, ...$factories ];
 	}
 
-	/** @var array{Closure,PaymentCardFactory,int} Action, current factory & its index */
-	private array $cliResolveArguments;
-
-	/** @return ($exitOnResolve is true ? ?PaymentCard : non-empty-array<int,non-empty-list<PaymentCard>>|null) */
-	public function resolveCard( string $cardNumber, bool $exitOnResolve, Closure $action ): PaymentCard|array|null {
+	/** @return ($exitOnResolve is true ? CardType|null : null|non-empty-array<int,non-empty-list<CardType>>) */
+	public function resolveCard( string $cardNumber, bool $exitOnResolve, Closure $action ): CardType|array|null {
 		$this->cliResolveArguments[0] = $action;
 		$resolved                     = [];
 
@@ -49,7 +53,7 @@ class PaymentCardResolver {
 			if ( $exitOnResolve ) {
 				$action( 'exit', $factoryNumber, $factory );
 
-				return $resolvedCards instanceof PaymentCard ? $resolvedCards : end( $resolvedCards );
+				return $resolvedCards instanceof CardType ? $resolvedCards : end( $resolvedCards );
 			}
 
 			$resolved[ $index ] = $resolvedCards;
@@ -60,7 +64,8 @@ class PaymentCardResolver {
 		return $resolved ? $resolved : null;
 	}
 
-	protected function handleResolvedCard( PaymentCardCreated $event ): bool {
+	/** @param CardCreated<CardType> $event */
+	protected function handleResolvedCard( CardCreated $event ): bool {
 		[$action, $factory, $factoryNumber] = $this->cliResolveArguments;
 		$eventHandlerStatus                 = $this->handlePaymentCardCreated( $event );
 

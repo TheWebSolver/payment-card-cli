@@ -12,7 +12,7 @@ use TheWebSolver\Codegarage\Cli\Attribute\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Helper\PaymentCardResolver;
+use TheWebSolver\Codegarage\PaymentCard\Helper\CardResolver;
 use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageBuilder;
 
 #[Command( 'resolve', 'payment-card', 'Resolves payment card against payload resource provided' )]
@@ -35,7 +35,7 @@ class ResolvePaymentCard extends Console {
 		$factories      = array_map( $this->createFactoriesFromPayload( ... ), $payloads );
 		$messageBuilder = $this->getMessageBuilder( $input, $output )
 			->forCardNumber( $cardNumber )
-			->usingCardResolver( $resolver = new PaymentCardResolver( ...array_values( $factories ) ) );
+			->usingCardResolver( $resolver = new CardResolver( ...array_values( $factories ) ) );
 
 		$resolvedCards = $resolver->resolveCard( $cardNumber, static::shouldExitOnResolve( $input ), $messageBuilder->build( ... ) );
 

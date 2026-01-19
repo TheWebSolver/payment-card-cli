@@ -7,9 +7,9 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Helper\PaymentCardResolver;
+use TheWebSolver\Codegarage\PaymentCard\Helper\CardResolver;
 
-class PaymentCardResolverTest extends TestCase {
+class CardResolverTest extends TestCase {
 	public const DOMESTIC_CARDS = [
 		'dnc' => [
 			'name'       => 'Dummy Nepal Card',
@@ -25,10 +25,10 @@ class PaymentCardResolverTest extends TestCase {
 		],
 	];
 
-	private PaymentCardResolver $resolver;
+	private CardResolver $resolver;
 
 	public function setUp(): void {
-		$this->resolver = new PaymentCardResolver(
+		$this->resolver = new CardResolver(
 			new PaymentCardFactory( self::DOMESTIC_CARDS ),
 			new PaymentCardFactory( PaymentCardFactory::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'paymentCards.json' )
 		);
@@ -40,11 +40,11 @@ class PaymentCardResolverTest extends TestCase {
 
 	#[Test]
 	#[DataProvider( 'provideNumbersForExit' )]
-	public function itResolvesEitherCardOrNullWhenExitStatusIsTrue( string $number, string $expectedAlias = '' ): void {
+	public function itResolvesEitherCardOrNullWhenExitStatusIsTrue( string $number, string $expectedName = '' ): void {
 		$action = static function () {};
 
-		if ( $expectedAlias ) {
-			$this->assertSame( $expectedAlias, $this->resolver->resolveCard( $number, true, $action )?->getAlias() );
+		if ( $expectedName ) {
+			$this->assertSame( $expectedName, $this->resolver->resolveCard( $number, true, $action )?->getName() );
 		} else {
 			$this->assertNull( $this->resolver->resolveCard( $number, true, $action ) );
 		}
@@ -54,10 +54,10 @@ class PaymentCardResolverTest extends TestCase {
 	public static function provideNumbersForExit(): array {
 		return [
 			[ 'non-a-number' ],
-			[ '9792030000000000', 'troy' ],
-			[ '6011277750635920', 'discover' ],
-			[ '6500830000000002', 'troy' ],
-			[ '6460435912011101', 'dnc' ],
+			[ '9792030000000000', 'Troy' ],
+			[ '6011277750635920', 'Discover' ],
+			[ '6500830000000002', 'Troy' ],
+			[ '6460435912011101', 'Dummy Nepal Card' ],
 		];
 	}
 
@@ -68,10 +68,10 @@ class PaymentCardResolverTest extends TestCase {
 		$this->assertCount( 2, $resolvedCards ?? [], 'Ues both factories payload to resolve card.' );
 
 		// @phpstan-ignore-next-line
-		$this->assertSame( 'dnc', $resolvedCards[0][0]->getAlias(), 'Matches "64" from Dummy payload' );
+		$this->assertSame( 'Dummy Nepal Card', $resolvedCards[0][0]->getName(), 'Matches "64" from Dummy payload' );
 		$this->assertFalse( isset( $resolvedCards[0][1] ) );
 		// @phpstan-ignore-next-line
-		$this->assertSame( 'discover', $resolvedCards[1][0]->getAlias(), 'Matches "64" from Discover payload' );
+		$this->assertSame( 'Discover', $resolvedCards[1][0]->getName(), 'Matches "64" from Discover payload' );
 		$this->assertFalse( isset( $resolvedCards[1][1] ) );
 	}
 }
