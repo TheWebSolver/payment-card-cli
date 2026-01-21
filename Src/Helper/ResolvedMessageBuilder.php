@@ -13,7 +13,6 @@ use TheWebSolver\Codegarage\PaymentCard\Helper\CardFactoryStatus as Action;
 
 class ResolvedMessageBuilder {
 	protected bool $shouldWrite = true;
-	protected string $cardNumber;
 	protected CardResolver $cardResolver;
 
 	/*
@@ -27,12 +26,6 @@ class ResolvedMessageBuilder {
 
 	/** @param OutputInterface::VERBOSITY* $verbosity */
 	public function __construct( protected InputInterface $input, protected OutputInterface $output, protected int $verbosity ) {}
-
-	public function forCardNumber( string $number ): self {
-		$this->cardNumber = $number;
-
-		return $this;
-	}
 
 	public function usingCardResolver( CardResolver $resolver ): self {
 		$this->cardResolver = $resolver;
@@ -75,27 +68,17 @@ class ResolvedMessageBuilder {
 	}
 
 	protected function handleCardResolved( Output $section ): void {
+		$section->addContent( $this->action->factoryInfo() );
+
 		if ( ! $this->action->started() ) {
-			$section->addContent( $this->getStartedMessage() );
+			$section->addContent( "<info>{$this->action->resourceInfo()}</>" );
 
 			return;
 		}
 
-		$number = $this->action->factoryNumber;
-		$color  = $this->action->isSuccess() ? 'green' : 'red';
+		$color = $this->action->isSuccess() ? 'green' : 'red';
 
-		$section->addContent( sprintf( Action::FACTORY_INFO, Action::FINISHED, $this->cardNumber, $number ) );
-		$section->addContent( "<bg={$color};fg=black>" . $this->action->resolvedInfo( $this->cardNumber ) . '</>' );
-	}
-
-	protected function getStartedMessage(): string {
-		$resourcePath = $this->action->factory->getResourcePath();
-
-		assert( is_string( $resourcePath ) );
-
-		return sprintf( Action::FACTORY_INFO, Action::STARTED, $this->cardNumber, $this->action->factoryNumber )
-		. PHP_EOL
-		. '<info>' . $this->action->resourceInfo() . '</>';
+		$section->addContent( "<bg={$color};fg=black>{$this->action->resolvedInfo()}</>" );
 	}
 
 	protected function factoryStoppedCreatingCards( Status $status ): bool {

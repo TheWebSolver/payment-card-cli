@@ -17,3 +17,11 @@ parameters:
 			path: Src/Helper/CardResolver.php
 			identifier: return.type
 			count: 1
+		- # All items of an array for property "cliResolveArguments" are eventually set inside loop.
+			path: Src/Helper/CardResolver.php
+			identifier: assign.propertyType
+			count: 1
+		- # Allow Mocked Card Type.
+			path: Tests/CardFactoryStatusTest.php
+			identifier: argument.type
+			message: '#^Parameter \#5 \$event of class.*?CardFactoryStatus constructor.*?$#'

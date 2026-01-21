@@ -17,7 +17,7 @@ class CardResolver {
 
 	/** @var non-empty-list<CardFactory<CardType>> */
 	private array $factories;
-	/** @var array{Closure,CardFactory<CardType>,int} Action, current factory & its index */
+	/** @var array{Closure,string,CardFactory<CardType>,int} Action, card number to resolve, current factory, & its index. */
 	private array $cliResolveArguments;
 
 	/**
@@ -35,22 +35,22 @@ class CardResolver {
 	 * @return ($exitOnResolve is true ? CardType|null : null|non-empty-array<int,non-empty-list<CardType>>)
 	 */
 	public function resolveCard( string $cardNumber, bool $exitOnResolve, Closure $action ): CardType|array|null {
-		$this->cliResolveArguments[0] = $action;
-		$resolved                     = [];
+		$this->cliResolveArguments = [ $action, $cardNumber ];
+		$resolved                  = [];
 
 		foreach ( $this->factories as $index => $factory ) {
-			$this->cliResolveArguments[1] = $factory;
-			$this->cliResolveArguments[2] = $factoryNumber = $index + 1;
+			$this->cliResolveArguments[2] = $factory;
+			$this->cliResolveArguments[3] = $factoryNumber = $index + 1;
 
-			$action( new CardFactoryStatus( $factory, $factoryNumber ) );
+			$action( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber ) );
 
 			if ( is_null( $resolvedCards = $this->resolve( $cardNumber, $factory, $exitOnResolve ) ) ) {
-				$action( new CardFactoryStatus( $factory, $factoryNumber, Status::Failure ) );
+				$action( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber, Status::Failure ) );
 
 				continue;
 			}
 
-			$action( new CardFactoryStatus( $factory, $factoryNumber, Status::Success ) );
+			$action( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber, Status::Success ) );
 
 			if ( $exitOnResolve ) {
 				return $resolvedCards instanceof CardType ? $resolvedCards : end( $resolvedCards );
@@ -64,11 +64,10 @@ class CardResolver {
 
 	/** @param CardCreated<CardType> $event */
 	protected function handleResolvedCard( CardCreated $event ): bool {
-		[$action, $factory, $factoryNumber] = $this->cliResolveArguments;
-		$eventHandlerStatus                 = $this->handlePaymentCardCreated( $event );
+		[$action, $cardNumber, $factory, $factoryNumber] = $this->cliResolveArguments;
+		$eventHandlerStatus                              = $this->handlePaymentCardCreated( $event );
 
-		// $action( 'created', $factoryNumber, $factory, $event );
-		$action( new CardFactoryStatus( $factory, $factoryNumber, Status::Omitted, $event ) );
+		$action( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber, Status::Omitted, $event ) );
 
 		return $eventHandlerStatus;
 	}

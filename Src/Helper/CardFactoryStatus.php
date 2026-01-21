@@ -37,6 +37,7 @@ final readonly class CardFactoryStatus {
 	public function __construct(
 		public CardFactory $factory,
 		public int $factoryNumber,
+		private string $cardNumber,
 		private ?Status $status = null,
 		private ?CardCreated $event = null
 	) {}
@@ -74,7 +75,7 @@ final readonly class CardFactoryStatus {
 			return $this->event()->card?->getName() ?? $this->throwPayloadError();
 		}
 
-		$data = $this->factory->getPayload()[ $this->event()->payloadIndex ] ?? null;
+		$data = $this->event()->payloadValue;
 
 		// The "name" key/value pair always exists if payload data follows Card Schema. Safeguard just in case...
 		return is_array( $data ) && is_string( $data['name'] ?? null ) ? $data['name'] : $this->throwPayloadError();
@@ -104,16 +105,23 @@ final readonly class CardFactoryStatus {
 		);
 	}
 
+	public function factoryInfo(): string {
+		$status = ! $this->started() ? self::STARTED : self::FINISHED;
+
+		return sprintf( self::FACTORY_INFO, ucwords( $status ), $this->cardNumber, $this->factoryNumber );
+	}
+
+	/** @throws LogicException When this method is invoked when factory is not creating card. */
 	public function createdInfo( Status $status ): string {
 		return sprintf( self::CREATED_INFO, $this->symbolToString( $status ), $this->resolvedToString( $status ), $this->currentCardName() );
 	}
 
-	public function resolvedInfo( string $cardNumber ): string {
+	public function resolvedInfo(): string {
 		$args = $this->isSuccess()
-			? [ Symbol::Tick->value, $this->resolvedToString( Status::Success ), $cardNumber ]
-			: [ Symbol::Cross->value, $this->resolvedToString( Status::Failure ), $cardNumber ];
+			? [ Symbol::Tick->value, $this->resolvedToString( Status::Success ) ]
+			: [ Symbol::Cross->value, $this->resolvedToString( Status::Failure ) ];
 
-		return sprintf( self::RESOLVED_INFO, ...$args );
+		return sprintf( self::RESOLVED_INFO, ...[ ...$args, $this->factoryNumber ] );
 	}
 
 	private function throwPayloadError(): never {
