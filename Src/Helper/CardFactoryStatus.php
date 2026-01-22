@@ -11,9 +11,6 @@ use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardType;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardFactory;
 
 final readonly class CardFactoryStatus {
-	public const STARTED  = 'started';
-	public const FINISHED = 'finished';
-
 	public const CURRENT_CARD_ERROR = 'Impossible to get current card created when factory #%s is not creating cards';
 	public const CHECK_NEXT_INFO    = 'Checking against next card...';
 
@@ -37,7 +34,7 @@ final readonly class CardFactoryStatus {
 	public function __construct(
 		public CardFactory $factory,
 		public int $factoryNumber,
-		private string $cardNumber,
+		public string $cardNumber,
 		private ?Status $status = null,
 		private ?CardCreated $current = null
 	) {}
@@ -81,7 +78,7 @@ final readonly class CardFactoryStatus {
 		return is_array( $data ) && is_string( $data['name'] ?? null ) ? $data['name'] : $this->throwPayloadError();
 	}
 
-	public function resolvedToString( Status $status ): string {
+	public static function resolvedToString( Status $status ): string {
 		return match ( $status ) {
 			Status::Success => 'Resolved',
 			Status::Failure => 'Could not resolve',
@@ -89,7 +86,7 @@ final readonly class CardFactoryStatus {
 		};
 	}
 
-	public function symbolToString( Status $status ): string {
+	public static function symbolToString( Status $status ): string {
 		return match ( $status ) {
 			Status::Success => Symbol::Green->value,
 			Status::Failure => Symbol::Red->value,
@@ -101,14 +98,14 @@ final readonly class CardFactoryStatus {
 	public function resourceInfo(): string {
 		return sprintf(
 			self::RESOURCE_INFO,
-			realpath( $this->factory->getResourcePath() ?? $this->throwResourceError() ) ?: $this->throwResourceError()
+			realpath( $this->factory->getResourcePath() ?: $this->throwResourceError() ) ?: $this->throwResourceError()
 		);
 	}
 
 	public function factoryInfo(): string {
-		$status = ! $this->started() ? self::STARTED : self::FINISHED;
+		$status = ! $this->started() ? 'Started' : 'Finished';
 
-		return sprintf( self::FACTORY_INFO, ucwords( $status ), $this->cardNumber, $this->factoryNumber );
+		return sprintf( self::FACTORY_INFO, $status, $this->cardNumber, $this->factoryNumber );
 	}
 
 	/** @throws LogicException When this method is invoked when factory is not creating card. */
