@@ -14,8 +14,8 @@ final readonly class CardFactoryStatus {
 	public const STARTED  = 'started';
 	public const FINISHED = 'finished';
 
-	public const EVENT_ERROR     = "Card resolver action's event cannot be used when factory is not creating cards";
-	public const CHECK_NEXT_INFO = 'Checking against next card...';
+	public const CURRENT_CARD_ERROR = 'Impossible to get current card created when factory #%s is not creating cards';
+	public const CHECK_NEXT_INFO    = 'Checking against next card...';
 
 	/** @placeholder `%s`: Current factory number */
 	public const RESOURCE_ERROR = 'Could not resolve payload resource path from factory #%s';
@@ -32,27 +32,27 @@ final readonly class CardFactoryStatus {
 
 	/**
 	 * @param CardFactory<CardType>  $factory
-	 * @param ?CardCreated<CardType> $event
+	 * @param ?CardCreated<CardType> $current
 	 */
 	public function __construct(
 		public CardFactory $factory,
 		public int $factoryNumber,
 		private string $cardNumber,
 		private ?Status $status = null,
-		private ?CardCreated $event = null
+		private ?CardCreated $current = null
 	) {}
 
 	public function started(): bool {
 		return null !== $this->status;
 	}
 
-	/** @phpstan-assert-if-true =CardCreated<CardType> $this->event */
+	/** @phpstan-assert-if-true =CardCreated<CardType> $this->current */
 	public function isCreating(): bool {
-		return Status::Omitted === $this->status && null !== $this->event;
+		return Status::Omitted === $this->status && null !== $this->current;
 	}
 
 	public function finished(): bool {
-		return $this->isCreating() && array_key_last( $this->factory->getPayload() ) === $this->event->payloadIndex;
+		return $this->isCreating() && array_key_last( $this->factory->getPayload() ) === $this->current->payloadIndex;
 	}
 
 	public function isSuccess(): bool {
@@ -62,20 +62,20 @@ final readonly class CardFactoryStatus {
 	/**
 	 * @return CardCreated<CardType>
 	 * @throws LogicException When this method is invoked when factory is not creating cards.
-	 * @see self::isCreating() Returns true when event is registered. Always check.
+	 * @see self::isCreating() Returns true when card created event is registered. Always check.
 	 */
-	public function event(): CardCreated {
-		return $this->event ?? throw new LogicException( self::EVENT_ERROR );
+	public function current(): CardCreated {
+		return $this->current ?? throw new LogicException( sprintf( self::CURRENT_CARD_ERROR, $this->factoryNumber ) );
 	}
 
 	/** @throws LogicException When cannot retrieve Card name from either created Card instance or payload data. */
 	public function currentCardName(): string {
-		if ( $this->event()->isCreatableCard ) {
+		if ( $this->current()->isCreatableCard ) {
 			// Card is never null when it is a creatable card. Safeguard just in case...
-			return $this->event()->card?->getName() ?? $this->throwPayloadError();
+			return $this->current()->card?->getName() ?? $this->throwPayloadError();
 		}
 
-		$data = $this->event()->payloadValue;
+		$data = $this->current()->payloadValue;
 
 		// The "name" key/value pair always exists if payload data follows Card Schema. Safeguard just in case...
 		return is_array( $data ) && is_string( $data['name'] ?? null ) ? $data['name'] : $this->throwPayloadError();

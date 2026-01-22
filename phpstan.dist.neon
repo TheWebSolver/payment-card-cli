@@ -24,4 +24,4 @@ parameters:
 		- # Allow Mocked Card Type.
 			path: Tests/CardFactoryStatusTest.php
 			identifier: argument.type
-			message: '#^Parameter \#5 \$event of class.*?CardFactoryStatus constructor.*?$#'
+			message: '#^Parameter \#5 \$current of class.*?CardFactoryStatus constructor.*?$#'

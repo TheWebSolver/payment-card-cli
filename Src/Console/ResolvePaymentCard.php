@@ -34,7 +34,7 @@ class ResolvePaymentCard extends Console {
 
 		$factories      = array_map( $this->createFactoriesFromPayload( ... ), $payloads );
 		$messageBuilder = $this->getMessageBuilder( $input, $output )
-			->usingCardResolver( $resolver = new CardResolver( ...array_values( $factories ) ) );
+			->using( $resolver = new CardResolver( ...array_values( $factories ) ) );
 
 		$resolvedCards = $resolver->resolveCard( $cardNumber, static::shouldExitOnResolve( $input ), $messageBuilder->build( ... ) );
 

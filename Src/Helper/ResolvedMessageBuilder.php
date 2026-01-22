@@ -9,7 +9,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
 use TheWebSolver\Codegarage\PaymentCard\Console\ResolvePaymentCard;
 use Symfony\Component\Console\Output\ConsoleSectionOutput as Output;
-use TheWebSolver\Codegarage\PaymentCard\Helper\CardFactoryStatus as Action;
+use TheWebSolver\Codegarage\PaymentCard\Helper\CardFactoryStatus as Event;
 
 class ResolvedMessageBuilder {
 	protected bool $shouldWrite = true;
@@ -22,12 +22,12 @@ class ResolvedMessageBuilder {
 	*/
 
 	/** Parameter provided to build message. */
-	private Action $action;
+	private Event $event;
 
 	/** @param OutputInterface::VERBOSITY* $verbosity */
 	public function __construct( protected InputInterface $input, protected OutputInterface $output, protected int $verbosity ) {}
 
-	public function usingCardResolver( CardResolver $resolver ): self {
+	public function using( CardResolver $resolver ): self {
 		$this->cardResolver = $resolver;
 
 		return $this;
@@ -39,14 +39,14 @@ class ResolvedMessageBuilder {
 		return $this;
 	}
 
-	public function build( Action $action ): ?Output {
+	public function build( Event $event ): ?Output {
 		if ( ! $section = Console::getOutputSection( $this->output, $this->verbosity ) ) {
 			return null;
 		}
 
-		$this->action = $action;
+		$this->event = $event;
 
-		if ( $action->isCreating() ) {
+		if ( $event->isCreating() ) {
 			$this->handleCardCreated( $section );
 		} else {
 			$this->handleCardResolved( $section );
@@ -54,35 +54,33 @@ class ResolvedMessageBuilder {
 
 		$this->shouldWrite && $section->writeln( $section->getContent() );
 
-		unset( $this->action );
+		unset( $this->event );
 
 		return $section;
 	}
 
 	protected function handleCardCreated( Output $section ): void {
-		$status = $this->cardResolver->getCoveredCardStatus()[ $this->action->event()->payloadIndex ];
+		$status = $this->cardResolver->getCoveredCardStatus()[ $this->event->current()->payloadIndex ];
 
-		$section->addContent( $this->action->createdInfo( $status ) );
+		$section->addContent( $this->event->createdInfo( $status ) );
 
-		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( Action::CHECK_NEXT_INFO );
+		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( Event::CHECK_NEXT_INFO );
 	}
 
-	protected function handleCardResolved( Output $section ): void {
-		$section->addContent( $this->action->factoryInfo() );
+	protected function handleCardResolved( Output $section ): int {
+		$section->addContent( $this->event->factoryInfo() );
 
-		if ( ! $this->action->started() ) {
-			$section->addContent( "<info>{$this->action->resourceInfo()}</>" );
-
-			return;
-		}
-
-		$color = $this->action->isSuccess() ? 'green' : 'red';
-
-		$section->addContent( "<bg={$color};fg=black>{$this->action->resolvedInfo()}</>" );
+		return ! $this->event->started()
+			? $section->addContent( "<info>{$this->event->resourceInfo()}</>" )
+			: $section->addContent( $this->colorize( $this->event->isSuccess() ? 'green' : 'red', $this->event->resolvedInfo() ) );
 	}
 
 	protected function factoryStoppedCreatingCards( Status $status ): bool {
-		return $this->action->finished()
+		return $this->event->finished()
 			|| ( Status::Success === $status && ResolvePaymentCard::shouldExitOnResolve( $this->input ) );
+	}
+
+	protected function colorize( string $bg, string $info, string $fg = 'black' ): string {
+		return "<bg={$bg};fg={$fg}>{$info}</>";
 	}
 }

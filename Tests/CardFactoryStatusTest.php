@@ -30,14 +30,14 @@ class CardFactoryStatusTest extends TestCase {
 	#[Test]
 	public function itEnsuresActionIsSuccessfulBasedOnStatus(): void {
 		$factory = $this->createMock( CardFactory::class );
-		$event   = new CardCreated( $this->createMock( CardType::class ), 'first', 'Test Card', true );
+		$current = new CardCreated( $this->createMock( CardType::class ), 'first', 'Test Card', true );
 
 		$factory->expects( $invokeMocker = $this->exactly( 2 ) )
 			->method( 'getPayload' )
 			->willReturnCallback( fn () => [ 1 === $invokeMocker->numberOfInvocations() ? 'first' : 'last' => 'Test Card' ] );
 
 		foreach ( Status::cases() as $status ) {
-			$resolveEvent = new CardFactoryStatus( $factory, 0, '0', $status, $event );
+			$resolveEvent = new CardFactoryStatus( $factory, 0, '0', $status, $current );
 
 			$this->assertTrue( $resolveEvent->started() );
 			$this->assertSame( Status::Omitted === $status ? true : false, $resolveEvent->isCreating() );
@@ -50,7 +50,7 @@ class CardFactoryStatusTest extends TestCase {
 		$this->assertFalse( $nonCreatingEvent->isCreating() );
 		$this->assertFalse( $nonCreatingEvent->finished() );
 
-		$creatingEvent = new CardFactoryStatus( $factory, 0, '0', Status::Omitted, $event );
+		$creatingEvent = new CardFactoryStatus( $factory, 0, '0', Status::Omitted, $current );
 
 		$this->assertTrue( $creatingEvent->isCreating() );
 		$this->assertFalse( $creatingEvent->finished() ); // Invoked "getPayload" #2.
@@ -62,16 +62,16 @@ class CardFactoryStatusTest extends TestCase {
 		$resolveEvent = new CardFactoryStatus( $this->createStub( CardFactory::class ), 0, '0' );
 
 		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( $expectedMsg );
+		$this->expectExceptionMessage( sprintf( $expectedMsg, 0 ) );
 		$resolveEvent->{$methodName}();
 	}
 
 	/** @return string[][] */
 	public static function provideThrowableMethodNames(): array {
 		return [
-			[ 'event', CardFactoryStatus::EVENT_ERROR ],
-			[ 'currentCardName', CardFactoryStatus::EVENT_ERROR ],
-			[ 'resourceInfo', sprintf( CardFactoryStatus::RESOURCE_ERROR, 0 ) ],
+			[ 'current', CardFactoryStatus::CURRENT_CARD_ERROR ],
+			[ 'currentCardName', CardFactoryStatus::CURRENT_CARD_ERROR ],
+			[ 'resourceInfo', CardFactoryStatus::RESOURCE_ERROR ],
 		];
 	}
 
@@ -90,18 +90,18 @@ class CardFactoryStatusTest extends TestCase {
 		$cardNotCreated = new CardCreated( $card, 0, [ 'name' => 'Payload Card' ], false );
 		$nonCreateEvent = new CardFactoryStatus( $factory, 0, '0', Status::Failure, $cardNotCreated );
 
-		$this->assertSame( 'Payload Card', $nonCreateEvent->currentCardName() ); // From $event->payloadValue.
+		$this->assertSame( 'Payload Card', $nonCreateEvent->currentCardName() ); // From $current->payloadValue.
 	}
 
-	/** @param ?CardCreated<CardType> $event */
+	/** @param ?CardCreated<CardType> $current */
 	#[Test]
 	#[DataProvider( 'provideInvalidEventForCurrentCardName' )]
 	public function itThrowsExceptionForCurrentCardNameWhenNoEventOrEventPropertiesMismatch(
-		?CardCreated $event,
+		?CardCreated $current,
 		string $expectedMsg = CardFactoryStatus::PAYLOAD_ERROR
 	): void {
 		$factory      = $this->createStub( CardFactory::class );
-		$resolveEvent = new CardFactoryStatus( $factory, 0, '0', Status::Success, $event );
+		$resolveEvent = new CardFactoryStatus( $factory, 0, '0', Status::Success, $current );
 
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( sprintf( $expectedMsg, 0 ) );
@@ -114,7 +114,7 @@ class CardFactoryStatusTest extends TestCase {
 		$card = self::createStub( CardType::class );
 
 		return [
-			[ null, CardFactoryStatus::EVENT_ERROR ],
+			[ null, CardFactoryStatus::CURRENT_CARD_ERROR ],
 			[ new CardCreated( null /* Not created even though it is set as creatable */, '', [], true ) ],
 			[ new CardCreated( $card, 'card-key', 'payload data must be an array', false ) ],
 			[ new CardCreated( $card, 'card-key', [ 'no-"name"-key' => 'Card Name' ], false ) ],
