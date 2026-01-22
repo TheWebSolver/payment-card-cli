@@ -21,7 +21,6 @@ parameters:
 			path: Src/Helper/CardResolver.php
 			identifier: assign.propertyType
 			count: 1
-		- # Allow Mocked Card Type.
-			path: Tests/CardFactoryStatusTest.php
+		- # Allow Mocked Card Type in test files.
 			identifier: argument.type
 			message: '#^Parameter \#5 \$current of class.*?CardFactoryStatus constructor.*?$#'
