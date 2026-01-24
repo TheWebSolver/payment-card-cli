@@ -62,17 +62,17 @@ class ResolvedMessageBuilder {
 	protected function handleCardCreated( Output $section ): void {
 		$status = $this->cardResolver->getCoveredCardStatus()[ $this->event->current()->payloadIndex ];
 
-		$section->addContent( $this->event->createdInfo( $status ) );
+		$section->addContent( $this->event->cardResolvedInfo( $status ) );
 
 		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( Event::CHECK_NEXT_INFO );
 	}
 
 	protected function handleCardResolved( Output $section ): int {
-		$section->addContent( $this->event->factoryInfo() );
+		$section->addContent( $this->event->factoryStatusInfo() );
 
 		return ! $this->event->started()
 			? $section->addContent( "<info>{$this->event->resourceInfo()}</>" )
-			: $section->addContent( $this->colorize( $this->event->isSuccess() ? 'green' : 'red', $this->event->resolvedInfo() ) );
+			: $section->addContent( $this->colorize( $this->event->isSuccess() ? 'green' : 'red', $this->event->factoryResolvedInfo() ) );
 	}
 
 	protected function factoryStoppedCreatingCards( Status $status ): bool {

@@ -21,11 +21,11 @@ final readonly class CardFactoryStatus {
 	/** @placeholder: `%s`: Realpath of Payload resource */
 	public const RESOURCE_INFO = 'Payload resource path: %s';
 	/** @placeholder: `1:` Factory started or finished, `2:` Current factory number */
-	public const FACTORY_INFO = '%1$s resolving card number "%2$s" against payload from Factory #%3$d';
+	public const FACTORY_STATUS_INFO = '%1$s resolving card number "%2$s" against payload from Factory #%3$d';
 	/** @placeholder `1:` Symbol, `2:` Card resolved or not, `3:` Current factory number */
-	public const RESOLVED_INFO = '%1$s %2$s Card against payload from Factory #%3$d';
+	public const FACTORY_RESOLVED_INFO = '%1$s %2$s Card against payload from Factory #%3$d';
 	/** @placeholder `1:` Symbol, `2:` Card instance created or not, `3:` Card name */
-	public const CREATED_INFO = '%1$s %2$s card number as "%3$s" card';
+	public const CARD_RESOLVED_INFO = '%1$s %2$s card number as "%3$s" card';
 
 	/**
 	 * @param CardFactory<CardType>  $factory
@@ -102,23 +102,23 @@ final readonly class CardFactoryStatus {
 		);
 	}
 
-	public function factoryInfo(): string {
+	public function factoryStatusInfo(): string {
 		$status = ! $this->started() ? 'Started' : 'Finished';
 
-		return sprintf( self::FACTORY_INFO, $status, $this->cardNumber, $this->factoryNumber );
+		return sprintf( self::FACTORY_STATUS_INFO, $status, $this->cardNumber, $this->factoryNumber );
 	}
 
 	/** @throws LogicException When this method is invoked when factory is not creating card. */
-	public function createdInfo( Status $status ): string {
-		return sprintf( self::CREATED_INFO, $this->symbolToString( $status ), $this->resolvedToString( $status ), $this->currentCardName() );
+	public function cardResolvedInfo( Status $status ): string {
+		return sprintf( self::CARD_RESOLVED_INFO, $this->symbolToString( $status ), $this->resolvedToString( $status ), $this->currentCardName() );
 	}
 
-	public function resolvedInfo(): string {
+	public function factoryResolvedInfo(): string {
 		$args = $this->isSuccess()
 			? [ Symbol::Tick->value, $this->resolvedToString( Status::Success ) ]
 			: [ Symbol::Cross->value, $this->resolvedToString( Status::Failure ) ];
 
-		return sprintf( self::RESOLVED_INFO, ...[ ...$args, $this->factoryNumber ] );
+		return sprintf( self::FACTORY_RESOLVED_INFO, ...[ ...$args, $this->factoryNumber ] );
 	}
 
 	private function throwPayloadError(): never {

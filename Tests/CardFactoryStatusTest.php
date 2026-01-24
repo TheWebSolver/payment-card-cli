@@ -186,21 +186,21 @@ class CardFactoryStatusTest extends TestCase {
 		$factory = $this->createStub( CardFactory::class );
 
 		$this->assertSame(
-			sprintf( CardFactoryStatus::FACTORY_INFO, 'Started', '12345', 0 ),
-			( new CardFactoryStatus( $factory, 0, '12345', null ) )->factoryInfo()
+			sprintf( CardFactoryStatus::FACTORY_STATUS_INFO, 'Started', '12345', 0 ),
+			( new CardFactoryStatus( $factory, 0, '12345', null ) )->factoryStatusInfo()
 		);
 
 		foreach ( Status::cases() as $status ) {
 			$this->assertSame(
-				sprintf( CardFactoryStatus::FACTORY_INFO, 'Finished', '6789', 1 ),
-				( new CardFactoryStatus( $factory, 1, '6789', $status ) )->factoryInfo(),
+				sprintf( CardFactoryStatus::FACTORY_STATUS_INFO, 'Finished', '6789', 1 ),
+				( new CardFactoryStatus( $factory, 1, '6789', $status ) )->factoryStatusInfo(),
 				'Always returns "Finished" info when status is not null'
 			);
 		}
 	}
 
 	#[Test]
-	public function itGetsInfoAboutResolvedStatus(): void {
+	public function itGetsInfoAboutFactoryResolved(): void {
 		$factory = $this->createStub( CardFactory::class );
 
 		foreach ( [ null, ...Status::cases() ] as $status ) {
@@ -208,8 +208,31 @@ class CardFactoryStatusTest extends TestCase {
 			$symbol     = Status::Success === $status ? Symbol::Tick : Symbol::Cross;
 
 			$this->assertSame(
-				sprintf( CardFactoryStatus::RESOLVED_INFO, $symbol->value, $isResolved, 0 ),
-				( new CardFactoryStatus( $factory, 0, '1', $status ) )->resolvedInfo()
+				sprintf( CardFactoryStatus::FACTORY_RESOLVED_INFO, $symbol->value, $isResolved, 0 ),
+				( new CardFactoryStatus( $factory, 0, '1', $status ) )->factoryResolvedInfo()
+			);
+		}
+	}
+
+	#[Test]
+	public function itGetsInfoAboutCardResolved(): void {
+		$factory = $this->createStub( CardFactory::class );
+		$card    = $this->createMock( CardType::class );
+
+		$card->expects( $this->exactly( 3 ) )->method( 'getName' )->willReturn( 'Test Card' );
+
+		// @phpstan-ignore-next-line
+		$event = new CardFactoryStatus( $factory, 0, '0', current: new CardCreated( $card, 0, [], true ) );
+		$info  = [
+			'Resolved'          => [ Symbol::Green, Status::Success ],
+			'Could not resolve' => [ Symbol::Red, Status::Failure ],
+			'Skipped resolving' => [ Symbol::NotAllowed, Status::Omitted ],
+		];
+
+		foreach ( $info as $status => [$symbol, $case] ) {
+			$this->assertSame(
+				sprintf( CardFactoryStatus::CARD_RESOLVED_INFO, $symbol->value, $status, 'Test Card' ),
+				$event->cardResolvedInfo( $case )
 			);
 		}
 	}
