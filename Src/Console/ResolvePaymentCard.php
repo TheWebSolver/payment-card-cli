@@ -13,13 +13,16 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
 use TheWebSolver\Codegarage\PaymentCard\Helper\CardResolver;
-use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageBuilder;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolverAction;
+use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageHandler;
 
 #[Command( 'resolve', 'payment-card', 'Resolves payment card against payload resource provided' )]
 #[Positional( 'card-number', 'Payment Card Number to resolve against payload', isOptional: false )]
 #[Flag( 'all', 'Continue further Payment Card creation after first resolve', isNegatable: false )]
 #[Associative( 'payload', 'Payload to create Payment Card instances to validate given card number', isOptional: false, isVariadic: true, shortcut: 'P' )]
 class ResolvePaymentCard extends Console {
+	public function __construct( private ?ResolverAction $messageHandler = null ) {}
+
 	public function initialize( InputInterface $input, OutputInterface $output ): void {
 		if ( ! $input->getOption( 'payload' ) ) {
 			throw new LogicException( 'Atleast one payload resource path is required to validate Payment Card Number' );
@@ -32,23 +35,20 @@ class ResolvePaymentCard extends Console {
 		assert( is_array( $payloads ) );
 		assert( is_string( $cardNumber ) );
 
-		$factories      = array_map( $this->createFactoriesFromPayload( ... ), $payloads );
-		$messageBuilder = $this->getMessageBuilder( $input, $output )
-			->using( $resolver = new CardResolver( ...array_values( $factories ) ) );
+		$factories = array_map( $this->createFactoriesFromPayload( ... ), $payloads );
+		$resolver  = new CardResolver( ...array_values( $factories ) );
+		$handler   = $this->messageHandler
+			?? ( new ResolvedMessageHandler( $input, $output, OutputInterface::VERBOSITY_VERY_VERBOSE ) )->using( $resolver );
 
-		$resolvedCards = $resolver->resolveCard( $cardNumber, static::shouldExitOnResolve( $input ), $messageBuilder->build( ... ) );
+		$resolvedCards = $resolver->resolve( $cardNumber, static::shouldExitOnResolve( $input ), $handler );
 
 		$output->writeln( sprintf( 'Given payment card number "%1$s" is %2$s', $cardNumber, null !== $resolvedCards ? 'valid' : 'invalid' ) );
 
-		return self::SUCCESS;
+		return null !== $resolvedCards ? self::SUCCESS : self::FAILURE;
 	}
 
 	public static function shouldExitOnResolve( InputInterface $input ): bool {
 		return false !== $input->getOption( 'all' ) ? false : true;
-	}
-
-	protected function getMessageBuilder( InputInterface $input, OutputInterface $output ): ResolvedMessageBuilder {
-		return new ResolvedMessageBuilder( $input, $output, OutputInterface::VERBOSITY_VERY_VERBOSE );
 	}
 
 	private function createFactoriesFromPayload( mixed $resource ): PaymentCardFactory {

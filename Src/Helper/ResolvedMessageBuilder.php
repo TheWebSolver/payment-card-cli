@@ -7,21 +7,23 @@ use TheWebSolver\Codegarage\Cli\Console;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardResolver;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolverAction;
 use TheWebSolver\Codegarage\PaymentCard\Console\ResolvePaymentCard;
 use Symfony\Component\Console\Output\ConsoleSectionOutput as Output;
 use TheWebSolver\Codegarage\PaymentCard\Helper\CardFactoryStatus as Event;
 
-class ResolvedMessageBuilder {
+class ResolvedMessageHandler implements ResolverAction {
 	protected bool $shouldWrite = true;
-	protected CardResolver $cardResolver;
+	private CardResolver $cardResolver;
 
 	/*
 	|------------------------------------------------------------------------------------------------
-	| Artifacts during build process. Must be cleared after build is complete
+	| Artifacts during handling process. Must be cleared after it is complete
 	|------------------------------------------------------------------------------------------------
 	*/
 
-	/** Parameter provided to build message. */
+	/** Parameter provided to handle method. */
 	private Event $event;
 
 	/** @param OutputInterface::VERBOSITY* $verbosity */
@@ -33,13 +35,17 @@ class ResolvedMessageBuilder {
 		return $this;
 	}
 
+	public function getResolver(): CardResolver {
+		return $this->cardResolver;
+	}
+
 	public function withoutPrint( bool $doNotWriteToConsole = true ): self {
 		$this->shouldWrite = ! $doNotWriteToConsole;
 
 		return $this;
 	}
 
-	public function build( Event $event ): ?Output {
+	public function handle( Event $event ): ?Output {
 		if ( ! $section = Console::getOutputSection( $this->output, $this->verbosity ) ) {
 			return null;
 		}
@@ -47,9 +53,9 @@ class ResolvedMessageBuilder {
 		$this->event = $event;
 
 		if ( $event->isCreating() ) {
-			$this->handleCardCreated( $section );
+			$this->handleCardResolvedInfo( $section );
 		} else {
-			$this->handleCardResolved( $section );
+			$this->handleFactoryResolvedInfo( $section );
 		}
 
 		$this->shouldWrite && $section->writeln( $section->getContent() );
@@ -59,15 +65,15 @@ class ResolvedMessageBuilder {
 		return $section;
 	}
 
-	protected function handleCardCreated( Output $section ): void {
-		$status = $this->cardResolver->getCoveredCardStatus()[ $this->event->current()->payloadIndex ];
+	protected function handleCardResolvedInfo( Output $section ): void {
+		$status = $this->getResolver()->getCoveredCardStatus()[ $this->event->current()->payloadIndex ];
 
 		$section->addContent( $this->event->cardResolvedInfo( $status ) );
 
 		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( Event::CHECK_NEXT_INFO );
 	}
 
-	protected function handleCardResolved( Output $section ): int {
+	protected function handleFactoryResolvedInfo( Output $section ): int {
 		$section->addContent( $this->event->factoryStatusInfo() );
 
 		return ! $this->event->started()

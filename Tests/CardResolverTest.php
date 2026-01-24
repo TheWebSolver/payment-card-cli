@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
 use TheWebSolver\Codegarage\PaymentCard\Helper\CardResolver;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolverAction;
 
 class CardResolverTest extends TestCase {
 	public const DOMESTIC_CARDS = [
@@ -41,7 +42,7 @@ class CardResolverTest extends TestCase {
 	#[Test]
 	#[DataProvider( 'provideNumbersForExit' )]
 	public function itResolvesEitherCardOrNullWhenExitStatusIsTrue( string $number, ?string $expectedName = null ): void {
-		$this->assertSame( $expectedName, $this->resolver->resolveCard( $number, true, function () {} )?->getName() );
+		$this->assertSame( $expectedName, $this->resolver->resolve( $number, true, null )?->getName() );
 	}
 
 	/** @return list<list<string>> */
@@ -57,7 +58,8 @@ class CardResolverTest extends TestCase {
 
 	#[Test]
 	public function itResolvesEitherCardOrNullWhenExitStatusIsFalse(): void {
-		$resolvedCards = $this->resolver->resolveCard( '6460435912011101', false, function () {} );
+		$action        = $this->createStub( ResolverAction::class );
+		$resolvedCards = $this->resolver->resolve( '6460435912011101', false, null );
 
 		$this->assertCount( 2, $resolvedCards ?? [], 'Ues both factories payload to resolve card.' );
 
