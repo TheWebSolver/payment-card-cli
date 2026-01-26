@@ -11,11 +11,11 @@ use TheWebSolver\Codegarage\Cli\Data\Associative;
 use TheWebSolver\Codegarage\Cli\Attribute\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use TheWebSolver\Codegarage\PaymentCard\CardResolver;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardResolver;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolverAction;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvesCard;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvedAction;
 use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageHandler;
-use TheWebSolver\Codegarage\PaymentCard\Helper\CardResolver as Resolver;
 
 #[Command( 'resolve', 'payment-card', 'Resolves payment card against payload resource provided' )]
 #[Positional( 'card-number', 'Payment Card Number to resolve against payload', isOptional: false )]
@@ -23,8 +23,8 @@ use TheWebSolver\Codegarage\PaymentCard\Helper\CardResolver as Resolver;
 #[Associative( 'payload', 'Payload to create Payment Card instances to validate given card number', isOptional: false, isVariadic: true, shortcut: 'P' )]
 class ResolvePaymentCard extends Console {
 	public function __construct(
-		private readonly CardResolver $resolver = new Resolver(),
-		private ?ResolverAction $handler = null
+		private readonly ResolvesCard $resolver = new CardResolver(),
+		private ?ResolvedAction $handler = null
 	) {
 		parent::__construct();
 	}

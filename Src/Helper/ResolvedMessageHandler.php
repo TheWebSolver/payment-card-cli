@@ -7,15 +7,15 @@ use TheWebSolver\Codegarage\Cli\Console;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardResolver;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolverAction;
+use TheWebSolver\Codegarage\PaymentCard\Event\CardResolved;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvesCard;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvedAction;
 use TheWebSolver\Codegarage\PaymentCard\Console\ResolvePaymentCard;
 use Symfony\Component\Console\Output\ConsoleSectionOutput as Output;
-use TheWebSolver\Codegarage\PaymentCard\Helper\CardFactoryStatus as Event;
 
-class ResolvedMessageHandler implements ResolverAction {
+class ResolvedMessageHandler implements ResolvedAction {
 	protected bool $shouldWrite = true;
-	private CardResolver $cardResolver;
+	private ResolvesCard $cardResolver;
 
 	/*
 	|------------------------------------------------------------------------------------------------
@@ -24,12 +24,12 @@ class ResolvedMessageHandler implements ResolverAction {
 	*/
 
 	/** Parameter provided to handle method. */
-	private Event $event;
+	private CardResolved $event;
 
 	/** @param OutputInterface::VERBOSITY* $verbosity */
 	public function __construct( protected InputInterface $input, protected OutputInterface $output, protected int $verbosity ) {}
 
-	public function resolvedWith( CardResolver $resolver ): self {
+	public function resolvedWith( ResolvesCard $resolver ): self {
 		$this->cardResolver = $resolver;
 
 		return $this;
@@ -41,7 +41,7 @@ class ResolvedMessageHandler implements ResolverAction {
 		return $this;
 	}
 
-	public function handle( Event $event ): ?Output {
+	public function handle( CardResolved $event ): ?Output {
 		if ( ! $section = Console::getOutputSection( $this->output, $this->verbosity ) ) {
 			return null;
 		}
@@ -66,7 +66,7 @@ class ResolvedMessageHandler implements ResolverAction {
 
 		$section->addContent( $this->event->cardResolvedInfo( $status ) );
 
-		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( Event::CHECK_NEXT_INFO );
+		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( CardResolved::CHECK_NEXT_INFO );
 	}
 
 	private function handleFactoryResolvedInfo( Output $section ): int {

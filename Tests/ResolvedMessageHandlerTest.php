@@ -11,12 +11,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
 use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use TheWebSolver\Codegarage\PaymentCard\Event\CardCreated;
+use TheWebSolver\Codegarage\PaymentCard\Event\CardResolved;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardType;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardFactory;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardResolver;
-use TheWebSolver\Codegarage\PaymentCard\Helper\CardFactoryStatus;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvesCard;
 use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageHandler;
 
 class ResolvedMessageHandlerTest extends TestCase {
@@ -50,7 +50,7 @@ class ResolvedMessageHandlerTest extends TestCase {
 	#[Test]
 	public function itDoesNotHandleMessagesWithDesiredVerbosity(): void {
 		$output = $this->createMock( ConsoleOutputInterface::class );
-		$event  = new CardFactoryStatus( $this->factory, 0, '1' );
+		$event  = new CardResolved( $this->factory, 0, '1' );
 
 		$output->expects( $invokeCount = $this->exactly( 2 ) )
 			->method( 'getVerbosity' )
@@ -71,7 +71,7 @@ class ResolvedMessageHandlerTest extends TestCase {
 	public function itHandlessMessageWhenFactoryIsCreatingCardInstance(): void {
 		[$output, $section] = $this->getConsoleOutput();
 		$card               = $this->createMock( CardType::class );
-		$resolver           = $this->createMock( CardResolver::class );
+		$resolver           = $this->createMock( ResolvesCard::class );
 		$input              = $this->createMock( InputInterface::class );
 
 		$payloadData = [
@@ -137,11 +137,11 @@ class ResolvedMessageHandlerTest extends TestCase {
 					$currentCard  = $payloadData[ $invokedCount ]['name'] ?? false;
 
 					if ( ! $currentCard ) {
-						$this->assertSame( CardFactoryStatus::CHECK_NEXT_INFO, $msg );
+						$this->assertSame( CardResolved::CHECK_NEXT_INFO, $msg );
 					} else {
 						[$state, $symbol] = $resolvedStatus[ $invokedCount ];
 
-						$this->assertSame( sprintf( CardFactoryStatus::CARD_RESOLVED_INFO, $symbol, $state, $currentCard ), $msg );
+						$this->assertSame( sprintf( CardResolved::CARD_RESOLVED_INFO, $symbol, $state, $currentCard ), $msg );
 					}
 
 					return 0;
@@ -156,7 +156,7 @@ class ResolvedMessageHandlerTest extends TestCase {
 			$value = $payloadData[ $index ];
 
 			$handler->handle(
-				new CardFactoryStatus( $this->factory, 0, '1', Status::Omitted, new CardCreated( $card, $index, $value, true ) )
+				new CardResolved( $this->factory, 0, '1', Status::Omitted, new CardCreated( $card, $index, $value, true ) )
 			);
 		}
 	}
