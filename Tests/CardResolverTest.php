@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
 use TheWebSolver\Codegarage\PaymentCard\Helper\CardResolver;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolverAction;
+use TheWebSolver\Codegarage\PaymentCard\Interfaces\CardResolver as Resolver;
 
 class CardResolverTest extends TestCase {
 	public const DOMESTIC_CARDS = [
@@ -26,10 +27,10 @@ class CardResolverTest extends TestCase {
 		],
 	];
 
-	private CardResolver $resolver;
+	private Resolver $resolver;
 
 	public function setUp(): void {
-		$this->resolver = new CardResolver(
+		$this->resolver = ( new CardResolver() )->using(
 			new PaymentCardFactory( self::DOMESTIC_CARDS ),
 			new PaymentCardFactory( PaymentCardFactory::RESOURCE_PATH . DIRECTORY_SEPARATOR . 'paymentCards.json' )
 		);
@@ -42,7 +43,7 @@ class CardResolverTest extends TestCase {
 	#[Test]
 	#[DataProvider( 'provideNumbersForExit' )]
 	public function itResolvesEitherCardOrNullWhenExitStatusIsTrue( string $number, ?string $expectedName = null ): void {
-		$this->assertSame( $expectedName, $this->resolver->resolve( $number, true, null )?->getName() );
+		$this->assertSame( $expectedName, $this->resolver->for( $number )->resolve( true )?->getName() );
 	}
 
 	/** @return list<list<string>> */
@@ -59,7 +60,7 @@ class CardResolverTest extends TestCase {
 	#[Test]
 	public function itResolvesEitherCardOrNullWhenExitStatusIsFalse(): void {
 		$action        = $this->createStub( ResolverAction::class );
-		$resolvedCards = $this->resolver->resolve( '6460435912011101', false, null );
+		$resolvedCards = $this->resolver->for( '6460435912011101' )->resolve( false );
 
 		$this->assertCount( 2, $resolvedCards ?? [], 'Ues both factories payload to resolve card.' );
 

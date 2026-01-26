@@ -19,35 +19,45 @@ class CardResolver implements Resolver {
 
 	/** @var non-empty-list<CardFactory<CardType>> */
 	private array $factories;
-	/** @var array{?ResolverAction,string,CardFactory<CardType>,int} Action handler, card number, current factory, & its index. */
-	private array $resolverArgs;
+	/** @var array{CardFactory<CardType>,int} Current factory, & its index. */
+	private array $currentFactory;
+	private string $cardNumber;
+	private ?ResolverAction $handler = null;
 
-	/**
-	 * @param TFactory $factory
-	 * @param TFactory ...$factories
-	 * @no-named-arguments
-	 * @template TFactory of CardFactory
-	 */
-	public function __construct( CardFactory $factory, CardFactory ...$factories ) {
-		$this->factories = [ $factory, ...$factories ];
+	public function for( string $cardNumber ): Resolver {
+		$this->cardNumber ??= $cardNumber;
+
+		return $this;
 	}
 
-	public function resolve( string $cardNumber, bool $exitOnResolve, ?ResolverAction $handler ): CardType|array|null {
-		$this->resolverArgs = [ $handler, $cardNumber ];
-		$resolved           = [];
+	public function using( CardFactory $factory, CardFactory ...$factories ): Resolver {
+		$this->factories ??= [ $factory, ...$factories ];
+
+		return $this;
+	}
+
+	public function handleWith( ResolverAction $handler ): Resolver {
+		$this->handler ??= $handler->resolvedWith( $this );
+
+		return $this;
+	}
+
+	public function resolve( bool $exitOnResolve ): CardType|array|null {
+		$resolved = [];
 
 		foreach ( $this->factories as $index => $factory ) {
-			[$this->resolverArgs[2], $this->resolverArgs[3]] = [ $factory, $factoryNumber = $index + 1 ];
+			$this->currentFactory = [ $factory, $factoryNumber = $index + 1 ];
 
-			$handler?->handle( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber ) );
+			$this->handler?->handle( new CardFactoryStatus( $factory, $factoryNumber, $this->cardNumber ) );
 
-			if ( is_null( $resolvedCards = $this->resolveUsing( $cardNumber, $factory, $exitOnResolve ) ) ) {
-				$handler?->handle( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber, Status::Failure ) );
+			$resolvedCards = $this->resolveUsing( $this->cardNumber, $factory, $exitOnResolve );
+			$status        = ( $hasNoCards = null === $resolvedCards ) ? Status::Failure : Status::Success;
 
+			$this->handler?->handle( new CardFactoryStatus( $factory, $factoryNumber, $this->cardNumber, $status ) );
+
+			if ( $hasNoCards ) {
 				continue;
 			}
-
-			$handler?->handle( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber, Status::Success ) );
 
 			if ( $exitOnResolve ) {
 				return $resolvedCards instanceof CardType ? $resolvedCards : end( $resolvedCards );
@@ -61,10 +71,10 @@ class CardResolver implements Resolver {
 
 	/** @param CardCreated<CardType> $event */
 	protected function handleResolvedCard( CardCreated $event ): bool {
-		[$handler, $cardNumber, $factory, $factoryNumber] = $this->resolverArgs;
-		$eventHandlerStatus                               = $this->handlePaymentCardCreated( $event );
+		[$factory, $factoryNumber] = $this->currentFactory;
+		$eventHandlerStatus        = $this->handlePaymentCardCreated( $event );
 
-		$handler?->handle( new CardFactoryStatus( $factory, $factoryNumber, $cardNumber, Status::Omitted, $event ) );
+		$this->handler?->handle( new CardFactoryStatus( $factory, $factoryNumber, $this->cardNumber, Status::Omitted, $event ) );
 
 		return $eventHandlerStatus;
 	}

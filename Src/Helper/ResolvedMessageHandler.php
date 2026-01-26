@@ -29,14 +29,10 @@ class ResolvedMessageHandler implements ResolverAction {
 	/** @param OutputInterface::VERBOSITY* $verbosity */
 	public function __construct( protected InputInterface $input, protected OutputInterface $output, protected int $verbosity ) {}
 
-	public function using( CardResolver $resolver ): self {
+	public function resolvedWith( CardResolver $resolver ): self {
 		$this->cardResolver = $resolver;
 
 		return $this;
-	}
-
-	public function getResolver(): CardResolver {
-		return $this->cardResolver;
 	}
 
 	public function withoutPrint( bool $doNotWriteToConsole = true ): self {
@@ -65,15 +61,15 @@ class ResolvedMessageHandler implements ResolverAction {
 		return $section;
 	}
 
-	protected function handleCardResolvedInfo( Output $section ): void {
-		$status = $this->getResolver()->getCoveredCardStatus()[ $this->event->current()->payloadIndex ];
+	private function handleCardResolvedInfo( Output $section ): void {
+		$status = $this->cardResolver->getCoveredCardStatus()[ $this->event->current()->payloadIndex ];
 
 		$section->addContent( $this->event->cardResolvedInfo( $status ) );
 
 		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( Event::CHECK_NEXT_INFO );
 	}
 
-	protected function handleFactoryResolvedInfo( Output $section ): int {
+	private function handleFactoryResolvedInfo( Output $section ): int {
 		$section->addContent( $this->event->factoryStatusInfo() );
 
 		return ! $this->event->started()
@@ -81,12 +77,12 @@ class ResolvedMessageHandler implements ResolverAction {
 			: $section->addContent( $this->colorize( $this->event->isSuccess() ? 'green' : 'red', $this->event->factoryResolvedInfo() ) );
 	}
 
-	protected function factoryStoppedCreatingCards( Status $status ): bool {
+	private function factoryStoppedCreatingCards( Status $status ): bool {
 		return $this->event->finished()
 			|| ( Status::Success === $status && ResolvePaymentCard::shouldExitOnResolve( $this->input ) );
 	}
 
-	protected function colorize( string $bg, string $info, string $fg = 'black' ): string {
+	public static function colorize( string $bg, string $info, string $fg = 'black' ): string {
 		return "<bg={$bg};fg={$fg}>{$info}</>";
 	}
 }

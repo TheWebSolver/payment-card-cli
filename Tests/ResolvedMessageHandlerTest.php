@@ -149,14 +149,14 @@ class ResolvedMessageHandlerTest extends TestCase {
 			);
 
 		$handler = ( new ResolvedMessageHandler( $input, $output, Output::VERBOSITY_NORMAL ) )
-			->using( $resolver )
+			->resolvedWith( $resolver )
 			->withoutPrint( true );
 
-		foreach ( [ 1, 3, 5, 7, 9 ] as $payloadIndex ) {
-			$name = $payloadData[ $payloadIndex ]['name'];
+		foreach ( [ 1, 3, 5, 7, 9 ] as $index ) {
+			$value = $payloadData[ $index ];
 
 			$handler->handle(
-				new CardFactoryStatus( $this->factory, 0, '1', Status::Omitted, new CardCreated( $card, $payloadIndex, $payloadData[ $payloadIndex ], true ) )
+				new CardFactoryStatus( $this->factory, 0, '1', Status::Omitted, new CardCreated( $card, $index, $value, true ) )
 			);
 		}
 	}
