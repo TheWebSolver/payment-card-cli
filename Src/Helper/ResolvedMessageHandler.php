@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 namespace TheWebSolver\Codegarage\PaymentCard\Helper;
 
 use TheWebSolver\Codegarage\Cli\Console;
+use TheWebSolver\Codegarage\Cli\Enums\Symbol;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
@@ -63,8 +64,13 @@ class ResolvedMessageHandler implements ResolvedAction {
 
 	private function handleCardResolvedInfo( Output $section ): void {
 		$status = $this->cardResolver->getCoveredCardStatus()[ $this->event->current()->payloadIndex ];
+		$symbol = match ( $status ) {
+			Status::Success => Symbol::Green,
+			Status::Failure => Symbol::Red,
+			Status::Omitted => Symbol::NotAllowed,
+		};
 
-		$section->addContent( $this->event->cardResolvedInfo( $status ) );
+		$section->addContent( "{$symbol->value} {$this->event->cardResolvedInfo( $status )}" );
 
 		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( CardResolved::CHECK_NEXT_INFO );
 	}
@@ -72,9 +78,14 @@ class ResolvedMessageHandler implements ResolvedAction {
 	private function handleFactoryResolvedInfo( Output $section ): int {
 		$section->addContent( $this->event->factoryStatusInfo() );
 
-		return ! $this->event->started()
-			? $section->addContent( "<info>{$this->event->resourceInfo()}</>" )
-			: $section->addContent( $this->colorize( $this->event->isSuccess() ? 'green' : 'red', $this->event->factoryResolvedInfo() ) );
+		if ( ! $this->event->started() ) {
+			return $section->addContent( "<info>{$this->event->resourceInfo()}</>" );
+		}
+
+		$symbol = ( $this->event->isSuccess() ? Symbol::Tick : Symbol::Cross )->value;
+		$info   = $this->event->factoryResolvedInfo();
+
+		return $section->addContent( $this->colorize( $this->event->isSuccess() ? 'green' : 'red', "{$symbol} {$info}" ) );
 	}
 
 	private function factoryStoppedCreatingCards( Status $status ): bool {

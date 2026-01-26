@@ -141,7 +141,7 @@ class ResolvedMessageHandlerTest extends TestCase {
 					} else {
 						[$state, $symbol] = $resolvedStatus[ $invokedCount ];
 
-						$this->assertSame( sprintf( CardResolved::CARD_RESOLVED_INFO, $symbol, $state, $currentCard ), $msg );
+						$this->assertSame( "$symbol " . sprintf( CardResolved::CARD_RESOLVED_INFO, $state, $currentCard ), $msg );
 					}
 
 					return 0;
