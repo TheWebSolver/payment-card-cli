@@ -46,9 +46,9 @@ class ResolvedMessageHandler implements ConsoleResolvedAction {
 		return $this;
 	}
 
-	public function handle( CardResolved $event ): ?Output {
+	public function handle( CardResolved $event ): void {
 		if ( ! $section = Console::getOutputSection( $this->output, $this->verbosity ) ) {
-			return null;
+			return;
 		}
 
 		$this->event = $event;
@@ -62,8 +62,6 @@ class ResolvedMessageHandler implements ConsoleResolvedAction {
 		$this->writeToConsole && $section->writeln( $section->getContent() );
 
 		unset( $this->event );
-
-		return $section;
 	}
 
 	private function handleCardResolvedInfo( Output $section ): void {

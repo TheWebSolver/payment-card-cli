@@ -60,48 +60,36 @@ class ResolvedMessageHandlerTest extends TestCase {
 		unset( $this->factory );
 	}
 
-	/** @return array{ConsoleOutputInterface&MockObject,ConsoleSectionOutput&MockObject} */
-	private function getConsoleOutput(): array {
-		$output = $this->createMock( ConsoleOutputInterface::class );
-
-		$output->method( 'getVerbosity' )->willReturn( Output::VERBOSITY_DEBUG );
-
-		$output->method( 'section' )->willReturn( $section = $this->createMock( ConsoleSectionOutput::class ) );
-
-		return [ $output, $section ];
-	}
-
 	#[Test]
 	public function itDoesNotHandleMessagesWithDesiredVerbosity(): void {
 		$output = $this->createMock( ConsoleOutputInterface::class );
-		$event  = new CardResolved( $this->factory, 0, '1' );
 
-		$output->expects( $invokeCount = $this->exactly( 2 ) )
-			->method( 'getVerbosity' )
-			->willReturnCallback(
-				fn() => 1 === $invokeCount->numberOfInvocations() ? Output::VERBOSITY_SILENT : Output::VERBOSITY_DEBUG
-			);
+		$output->expects( $count = $this->exactly( 2 ) )->method( 'getVerbosity' )->willReturnCallback(
+			static fn() => 1 === $count->numberOfInvocations() ? Output::VERBOSITY_SILENT : Output::VERBOSITY_DEBUG
+		);
 
-		$handler = ( new ResolvedMessageHandler() )
-			->usingIO( $this->createStub( InputInterface::class ), $output, Output::VERBOSITY_NORMAL );
+		// Only invokes section method when output verbosity is greater or equal than provided to handler.
+		$output->expects( $this->once() )->method( 'section' );
 
-		$this->assertNull( $handler->handle( $event ) );
+		$input   = $this->createStub( InputInterface::class );
+		$handler = ( new ResolvedMessageHandler() )->usingIO( $input, $output, Output::VERBOSITY_NORMAL );
+		$event   = new CardResolved( $this->factory, 0, '1' );
 
-		$handler = ( new ResolvedMessageHandler() )
-			->usingIO( $this->createStub( InputInterface::class ), $output, Output::VERBOSITY_VERY_VERBOSE );
-
-		$this->assertInstanceOf( ConsoleSectionOutput::class, $handler->handle( $event ) );
+		$handler->handle( $event );
+		$handler->handle( $event );
 	}
 
 	#[Test]
 	public function itHandlessMessageWhenFactoryIsCreatingCardInstance(): void {
-		[$output, $section] = $this->getConsoleOutput();
-		$card               = $this->createMock( CardType::class );
-		$resolver           = $this->createMock( ResolvesCard::class );
-		$input              = $this->createMock( InputInterface::class );
+		$output   = $this->createMock( ConsoleOutputInterface::class );
+		$section  = $this->createMock( ConsoleSectionOutput::class );
+		$card     = $this->createMock( CardType::class );
+		$resolver = $this->createMock( ResolvesCard::class );
+		$input    = $this->createMock( InputInterface::class );
 
-		$this->factory->method( 'getPayload' )->willReturn( self::PAYLOAD_DATA );
-
+		$this->factory->expects( $this->exactly( 5 ) )->method( 'getPayload' )->willReturn( self::PAYLOAD_DATA );
+		$output->expects( $this->exactly( 5 ) )->method( 'getVerbosity' )->willReturn( Output::VERBOSITY_DEBUG );
+		$output->expects( $this->exactly( 5 ) )->method( 'section' )->willReturn( $section );
 		$resolver->expects( $this->exactly( 5 ) )->method( 'getCoveredCardStatus' )->willReturn( self::COVERED_CARDS_STATUS );
 
 		// When event is not finished and covered card's status is success.
