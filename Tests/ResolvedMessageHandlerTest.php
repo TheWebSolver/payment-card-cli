@@ -20,6 +20,30 @@ use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvesCard;
 use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageHandler;
 
 class ResolvedMessageHandlerTest extends TestCase {
+	final public const PAYLOAD_DATA = [
+		[ 'name' => 'One' ],
+		[ 'name' => 'Two' ],
+		[ 'name' => 'Three' ],
+		[ 'name' => 'Four' ],
+		[ 'name' => 'Five' ],
+	];
+
+	final public const COVERED_CARDS_STATUS = [
+		Status::Success,
+		Status::Failure,
+		Status::Omitted,
+		Status::Failure,
+		Status::Success,
+	];
+
+	final public const RESOLVED_STATUS = [
+		[ 'Resolved', Symbol::Green->value ],
+		[ 'Could not resolve', Symbol::Red->value ],
+		[ 'Skipped resolving', Symbol::NotAllowed->value ],
+		[ 'Could not resolve', Symbol::Red->value ],
+		[ 'Resolved', Symbol::Green->value ],
+	];
+
 	/** @var MockObject&CardFactory<CardType> */
 	private CardFactory&MockObject $factory;
 
@@ -58,11 +82,13 @@ class ResolvedMessageHandlerTest extends TestCase {
 				fn() => 1 === $invokeCount->numberOfInvocations() ? Output::VERBOSITY_SILENT : Output::VERBOSITY_DEBUG
 			);
 
-		$handler = new ResolvedMessageHandler( $this->createStub( InputInterface::class ), $output, Output::VERBOSITY_NORMAL );
+		$handler = ( new ResolvedMessageHandler() )
+			->usingIO( $this->createStub( InputInterface::class ), $output, Output::VERBOSITY_NORMAL );
 
 		$this->assertNull( $handler->handle( $event ) );
 
-		$handler = new ResolvedMessageHandler( $this->createStub( InputInterface::class ), $output, Output::VERBOSITY_VERY_VERBOSE );
+		$handler = ( new ResolvedMessageHandler() )
+			->usingIO( $this->createStub( InputInterface::class ), $output, Output::VERBOSITY_VERY_VERBOSE );
 
 		$this->assertInstanceOf( ConsoleSectionOutput::class, $handler->handle( $event ) );
 	}
@@ -74,89 +100,42 @@ class ResolvedMessageHandlerTest extends TestCase {
 		$resolver           = $this->createMock( ResolvesCard::class );
 		$input              = $this->createMock( InputInterface::class );
 
-		$payloadData = [
-			1  => [ 'name' => 'One' ],
-			3  => [ 'name' => 'Two' ],
-			5  => [ 'name' => 'Three' ],
-			7  => [ 'name' => 'Four' ],
-			9  => [ 'name' => 'Five' ],
-		];
+		$this->factory->method( 'getPayload' )->willReturn( self::PAYLOAD_DATA );
 
-		$payloadStatus = [
-			1  => Status::Success,
-			3  => Status::Failure,
-			5  => Status::Omitted,
-			7  => Status::Success,
-			9  => Status::Failure,
-		];
+		$resolver->expects( $this->exactly( 5 ) )->method( 'getCoveredCardStatus' )->willReturn( self::COVERED_CARDS_STATUS );
 
-		$resolvedStatus = [
-			1 => [ 'Resolved', Symbol::Green->value ],
-			7 => [ 'Resolved', Symbol::Green->value ],
-			3 => [ 'Could not resolve', Symbol::Red->value ],
-			9 => [ 'Could not resolve', Symbol::Red->value ],
-			5 => [ 'Skipped resolving', Symbol::NotAllowed->value ],
-		];
+		// When event is not finished and covered card's status is success.
+		$input->expects( $this->once() )->method( 'getOption' )->with( 'all' );
 
-		$this->factory->method( 'getPayload' )->willReturn( $payloadData );
+		$card->expects( $getNameMocker = $this->exactly( 5 ) )->method( 'getName' )->willReturnCallback(
+			fn () => self::PAYLOAD_DATA[ $getNameMocker->numberOfInvocations() - 1 ]['name']
+		);
 
-		$input
-			// ->expects( $this->exactly( 1 ) )
-			->method( 'getOption' )
-			->with( 'all' )
-			->willReturn( true );
+		$section->expects( $addContentMocker = $this->exactly( 5 ) )->method( 'addContent' )->willReturnCallback(
+			function ( string $actualContent, bool $newline ) use ( $addContentMocker ) {
+				$this->assertTrue( $newline );
 
-		$resolver
-			->expects( $this->exactly( 5 ) )
-			->method( 'getCoveredCardStatus' )
-			->willReturn( $payloadStatus );
+				$payloadIndex      = $addContentMocker->numberOfInvocations() - 1;
+				$cardName          = self::PAYLOAD_DATA[ $payloadIndex ]['name'];
+				[$status, $symbol] = self::RESOLVED_STATUS[ $payloadIndex ];
+				$expectedContent   = "$symbol " . sprintf( CardResolved::CARD_RESOLVED_INFO, $status, $cardName );
 
-		$card->expects( $getNameMocker = $this->exactly( 5 ) )
-			->method( 'getName' )
-			->willReturnCallback(
-				function () use ( $getNameMocker ) {
-					return match ( $getNameMocker->numberOfInvocations() ) {
-						default => '',
-						1 => 'One',
-						2 => 'Two',
-						3 => 'Three',
-						4 => 'Four',
-						5 => 'Five',
-					};
-				}
-			);
+				// Next card check content not added after final card is resolved.
+				( 4 !== $payloadIndex ) && ( $expectedContent .= PHP_EOL . CardResolved::CHECK_NEXT_INFO );
 
-		// Next card check content not added after final card in "9" index is created.
-		$section->expects( $addContentMocker = $this->exactly( 9 ) )
-			->method( 'addContent' )
-			->willReturnCallback(
-				function ( string $msg, bool $newline ) use ( $addContentMocker, $payloadData, $resolvedStatus ) {
-					$this->assertTrue( $newline );
+				$this->assertSame( $expectedContent, $actualContent );
 
-					$invokedCount = $addContentMocker->numberOfInvocations();
-					$currentCard  = $payloadData[ $invokedCount ]['name'] ?? false;
+				return 0;
+			}
+		);
 
-					if ( ! $currentCard ) {
-						$this->assertSame( CardResolved::CHECK_NEXT_INFO, $msg );
-					} else {
-						[$state, $symbol] = $resolvedStatus[ $invokedCount ];
+		$handler = ( new ResolvedMessageHandler( writeToConsole: false ) )->resolvedWith( $resolver )->usingIO( $input, $output );
 
-						$this->assertSame( "$symbol " . sprintf( CardResolved::CARD_RESOLVED_INFO, $state, $currentCard ), $msg );
-					}
-
-					return 0;
-				}
-			);
-
-		$handler = ( new ResolvedMessageHandler( $input, $output, Output::VERBOSITY_NORMAL ) )
-			->resolvedWith( $resolver )
-			->withoutPrint( true );
-
-		foreach ( [ 1, 3, 5, 7, 9 ] as $index ) {
-			$value = $payloadData[ $index ];
+		foreach ( array_keys( self::PAYLOAD_DATA ) as $index ) {
+			$data = self::PAYLOAD_DATA[ $index ];
 
 			$handler->handle(
-				new CardResolved( $this->factory, 0, '1', Status::Omitted, new CardCreated( $card, $index, $value, true ) )
+				new CardResolved( $this->factory, 0, '1', Status::Omitted, new CardCreated( $card, $index, $data, true ) )
 			);
 		}
 	}

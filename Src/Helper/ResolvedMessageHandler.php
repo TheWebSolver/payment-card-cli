@@ -9,14 +9,17 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\Enums\Status;
 use TheWebSolver\Codegarage\PaymentCard\Event\CardResolved;
+use TheWebSolver\Codegarage\PaymentCard\ConsoleResolvedAction;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvesCard;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvedAction;
 use TheWebSolver\Codegarage\PaymentCard\Console\ResolvePaymentCard;
 use Symfony\Component\Console\Output\ConsoleSectionOutput as Output;
 
-class ResolvedMessageHandler implements ResolvedAction {
-	protected bool $shouldWrite = true;
+class ResolvedMessageHandler implements ConsoleResolvedAction {
 	private ResolvesCard $cardResolver;
+	private InputInterface $input;
+	private OutputInterface $output;
+	/** @var OutputInterface::VERBOSITY* */
+	private int $verbosity;
 
 	/*
 	|------------------------------------------------------------------------------------------------
@@ -27,17 +30,18 @@ class ResolvedMessageHandler implements ResolvedAction {
 	/** Parameter provided to handle method. */
 	private CardResolved $event;
 
-	/** @param OutputInterface::VERBOSITY* $verbosity */
-	public function __construct( protected InputInterface $input, protected OutputInterface $output, protected int $verbosity ) {}
-
+	/** @param bool $writeToConsole Whether to print output section messages to the console or not. */
+	public function __construct( private readonly bool $writeToConsole = true ) {}
 	public function resolvedWith( ResolvesCard $resolver ): self {
 		$this->cardResolver = $resolver;
 
 		return $this;
 	}
 
-	public function withoutPrint( bool $doNotWriteToConsole = true ): self {
-		$this->shouldWrite = ! $doNotWriteToConsole;
+	public function usingIO( InputInterface $input, OutputInterface $output, int $verbosity = OutputInterface::VERBOSITY_VERY_VERBOSE ): self {
+		$this->input     = $input;
+		$this->output    = $output;
+		$this->verbosity = $verbosity;
 
 		return $this;
 	}
@@ -55,7 +59,7 @@ class ResolvedMessageHandler implements ResolvedAction {
 			$this->handleFactoryResolvedInfo( $section );
 		}
 
-		$this->shouldWrite && $section->writeln( $section->getContent() );
+		$this->writeToConsole && $section->writeln( $section->getContent() );
 
 		unset( $this->event );
 
@@ -70,9 +74,11 @@ class ResolvedMessageHandler implements ResolvedAction {
 			Status::Omitted => Symbol::NotAllowed,
 		};
 
-		$section->addContent( "{$symbol->value} {$this->event->cardResolvedInfo( $status )}" );
+		$content = "{$symbol->value} {$this->event->cardResolvedInfo( $status )}";
 
-		$this->factoryStoppedCreatingCards( $status ) || $section->addContent( CardResolved::CHECK_NEXT_INFO );
+		$this->factoryStoppedCreatingCards( $status ) || ( $content .= PHP_EOL . CardResolved::CHECK_NEXT_INFO );
+
+		$section->addContent( $content );
 	}
 
 	private function handleFactoryResolvedInfo( Output $section ): int {

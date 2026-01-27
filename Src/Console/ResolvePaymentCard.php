@@ -13,8 +13,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheWebSolver\Codegarage\PaymentCard\CardResolver;
 use TheWebSolver\Codegarage\PaymentCard\PaymentCardFactory;
+use TheWebSolver\Codegarage\PaymentCard\ConsoleResolvedAction;
 use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvesCard;
-use TheWebSolver\Codegarage\PaymentCard\Interfaces\ResolvedAction;
 use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageHandler;
 
 #[Command( 'resolve', 'payment-card', 'Resolves payment card against payload resource provided' )]
@@ -24,7 +24,7 @@ use TheWebSolver\Codegarage\PaymentCard\Helper\ResolvedMessageHandler;
 class ResolvePaymentCard extends Console {
 	public function __construct(
 		private readonly ResolvesCard $resolver = new CardResolver(),
-		private ?ResolvedAction $handler = null
+		private ConsoleResolvedAction $handler = new ResolvedMessageHandler()
 	) {
 		parent::__construct();
 	}
@@ -36,17 +36,14 @@ class ResolvePaymentCard extends Console {
 	}
 
 	public function execute( InputInterface $input, OutputInterface $output ): int {
-		$payloads   = $input->getOption( 'payload' );
 		$cardNumber = $input->getArgument( 'card-number' );
 
-		assert( is_array( $payloads ) );
 		assert( is_string( $cardNumber ) );
 
-		$factories     = array_map( $this->createFactoriesFromPayload( ... ), $payloads );
-		$resolver      = $this->resolver->for( $cardNumber )->using( ...array_values( $factories ) );
-		$resolvedCards = $resolver->handleWith(
-			$this->handler ?? new ResolvedMessageHandler( $input, $output, OutputInterface::VERBOSITY_VERY_VERBOSE )
-		)->resolve( static::shouldExitOnResolve( $input ) );
+		$resolvedCards = $this->resolver->for( $cardNumber )
+			->using( ...$this->createFactoriesFromPayload( $input ) )
+			->handleWith( $this->handler->usingIO( $input, $output ) )
+			->resolve( static::shouldExitOnResolve( $input ) );
 
 		$output->writeln( sprintf( 'Given payment card number "%1$s" is %2$s', $cardNumber, null !== $resolvedCards ? 'valid' : 'invalid' ) );
 
@@ -57,9 +54,16 @@ class ResolvePaymentCard extends Console {
 		return false !== $input->getOption( 'all' ) ? false : true;
 	}
 
-	private function createFactoriesFromPayload( mixed $resource ): PaymentCardFactory {
-		return new PaymentCardFactory(
-			is_string( $resource ) ? $resource : throw new LogicException( 'Payload resource is not of string type' )
-		);
+	/** @return non-empty-list<PaymentCardFactory> */
+	private function createFactoriesFromPayload( InputInterface $input ): array {
+		/** @var non-empty-list<non-empty-string> */
+		$payloads  = $input->getOption( 'payload' );
+		$factories = [];
+
+		foreach ( $payloads as $resourcePath ) {
+			$factories[] = PaymentCardFactory::createFromFile( $resourcePath );
+		}
+
+		return $factories;
 	}
 }
